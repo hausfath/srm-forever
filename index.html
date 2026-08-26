@@ -21,6 +21,7 @@
     --border:      rgba(16,20,24,0.10);
     --mit:         #2a78d6;   /* mitigation + CDR series */
     --srm:         #eb6834;   /* SRM scenario series */
+    --disc:        #1baf7a;   /* discount-rate chart */
     --good:        #006300;
     --warn-bg:     #fdf3e4;
     --warn-border: #e8c98a;
@@ -42,6 +43,7 @@
       --border:      rgba(255,255,255,0.10);
       --mit:         #3987e5;
       --srm:         #e0642f;
+      --disc:        #199e70;
       --good:        #0ca30c;
       --warn-bg:     #2a2214;
       --warn-border: #6b5526;
@@ -63,6 +65,7 @@
     --border:      rgba(255,255,255,0.10);
     --mit:         #3987e5;
     --srm:         #e0642f;
+    --disc:        #199e70;
     --good:        #0ca30c;
     --warn-bg:     #2a2214;
     --warn-border: #6b5526;
@@ -352,6 +355,18 @@
   <section class="panel">
     <div class="chart-head">
       <div>
+        <h2>Effective discount rate</h2>
+        <p class="sub" style="margin-bottom:0">The rate schedule implied by Weitzman discounting at the current &mu; and &sigma;. With &sigma; = 0 both lines are flat at &mu;. Hover for the weight a given year carries.</p>
+      </div>
+      <div class="ranges" data-chart="disc" role="group" aria-label="Time range"></div>
+    </div>
+    <div class="legend" id="legend-disc"></div>
+    <div class="chart-box" id="chart-disc"></div>
+  </section>
+
+  <section class="panel">
+    <div class="chart-head">
+      <div>
         <h2>Net CO&#8322; emissions</h2>
         <p class="sub" style="margin-bottom:0">GtCO&#8322; per year. The mitigation scenario goes net-negative while CDR runs.</p>
       </div>
@@ -539,7 +554,7 @@ const RANGES = [
   { label: '5000', to: 5000, log: false },
   { label: 'full (log)', to: null, log: true }
 ];
-const rangeState = { temp: 0, cost: 3, emis: 0 };
+const rangeState = { temp: 0, cost: 3, disc: 3, emis: 0 };
 
 function recompute() {
   params = readParams();
@@ -740,6 +755,24 @@ function renderChart(kind) {
     yTitle = 'Annual cost, $B/yr'; yFmt = v => v >= 1000 ? (v / 1000) + 'k' : String(Math.round(v));
     legendHTML = legendItem('var(--srm)', false, 'SRM scenario')
       + legendItem('var(--mit)', false, 'Mitigation + CDR');
+  } else if (kind === 'disc') {
+    const fwd = new Float64Array(N), avg = new Float64Array(N), wt = new Float64Array(N);
+    const mu = params.disc, sg = params.dsig;
+    for (let i = 0; i < N; i++) {
+      wt[i] = dfac(i, mu, sg);
+      fwd[i] = 100 * (sg > 0 && mu > 0 ? mu / (1 + sg * sg * i / mu) : mu);
+      avg[i] = i === 0 ? 100 * mu : -100 * Math.log(wt[i]) / i;
+    }
+    const fmtR = v => (v >= 1 ? v.toFixed(2) : v.toFixed(3)) + '%/yr';
+    const fmtW = v => v >= 0.001 ? (100 * v).toPrecision(3) + '%' : v.toExponential(1);
+    series = [
+      { arr: fwd, color: 'var(--disc)', dash: false, name: 'Rate applied to year t (forward)', short: 'forward', fmt: fmtR },
+      { arr: avg, color: 'var(--disc)', dash: true, name: 'Average rate, 2025 to t', short: 'average', fmt: fmtR },
+      { arr: wt, hidden: true, color: 'var(--disc)', name: 'Weight on year t (discount factor)', fmt: fmtW }
+    ];
+    yTitle = 'Effective discount rate, %/yr'; yFmt = v => v >= 1 ? v.toFixed(1) : v.toFixed(2);
+    legendHTML = legendItem('var(--disc)', false, 'Rate applied to year t (forward)')
+      + legendItem('var(--disc)', true, 'Average rate, 2025 \u2192 t');
   } else {
     series = [
       { arr: mid.eS, color: 'var(--srm)', dash: false, name: 'SRM scenario' },
@@ -754,6 +787,7 @@ function renderChart(kind) {
   /* y extent across drawn samples incl. bands */
   let vMin = Infinity, vMax = -Infinity;
   for (const s of series) {
+    if (s.hidden) continue;
     const arrs = [s.arr, s.lo, s.hi].filter(Boolean);
     if (s.flat != null) { vMin = Math.min(vMin, s.flat); vMax = Math.max(vMax, s.flat); }
     for (const a of arrs) for (const i of idx) { const v = a[i]; if (v < vMin) vMin = v; if (v > vMax) vMax = v; }
@@ -761,7 +795,7 @@ function renderChart(kind) {
   if (kind === 'emis') { vMin = Math.min(vMin, -2); vMax = Math.max(vMax, 42); }
   const pad = (vMax - vMin) * 0.07 || 1;
   vMin -= pad; vMax += pad;
-  if (kind === 'cost') vMin = Math.min(0, vMin);
+  if (kind === 'cost' || kind === 'disc') vMin = Math.min(0, vMin);
   const toY = v => M.t + 14 + (vMax - v) / (vMax - vMin) * (CH - M.t - 14 - M.b);
 
   let g = axes(xs, niceValTicks(vMin, vMax, 5), toY, yTitle, yFmt);
@@ -774,6 +808,7 @@ function renderChart(kind) {
     g += `<path d="${bandFrom(idx, s.lo, s.hi, xs.toX, toY)}" fill="${s.color}" opacity="0.10"/>`;
   /* lines */
   for (const s of series) {
+    if (s.hidden) continue;
     if (s.flat != null) {
       const xEnd = xs.toX(xs.to), y = toY(s.flat).toFixed(1);
       g += `<line x1="${xs.toX(START).toFixed(1)}" x2="${xEnd.toFixed(1)}" y1="${y}" y2="${y}"
@@ -787,12 +822,13 @@ function renderChart(kind) {
   const lastI = idx[idx.length - 1];
   const placed = [];
   for (const s of series) {
+    if (s.hidden) continue;
     const v = s.flat != null ? s.flat : s.arr[lastI];
     let y = toY(v);
     for (const py of placed) if (Math.abs(y - py) < 14) y = py + 14;
     placed.push(y);
-    const short = s.name.includes('Mitigation') ? 'Mitigation + CDR'
-      : s.name.includes('with SRM') ? 'with SRM' : (kind === 'temp' ? 'no SRM' : 'SRM scenario');
+    const short = s.short || (s.name.includes('Mitigation') ? 'Mitigation + CDR'
+      : s.name.includes('with SRM') ? 'with SRM' : (kind === 'temp' ? 'no SRM' : 'SRM scenario'));
     g += `<text class="direct-label" x="${CW - M.r + 8}" y="${y.toFixed(1)}" dy="0.32em">${short}</text>`;
   }
   box.innerHTML = `<svg viewBox="0 0 ${CW} ${CH}" role="img" aria-label="${yTitle} by year">
@@ -821,7 +857,8 @@ function attachHover(kind, xs, series, toY) {
     let rows = '';
     for (const s of series) {
       const v = s.flat != null ? s.flat : s.arr[i];
-      const val = kind === 'temp' ? fmtT(v) : kind === 'cost' ? fmtMoney(v) + '/yr' : v.toFixed(1) + ' Gt';
+      const val = s.fmt ? s.fmt(v)
+        : kind === 'temp' ? fmtT(v) : kind === 'cost' ? fmtMoney(v) + '/yr' : v.toFixed(1) + ' Gt';
       rows += `<div class="tt-row"><span><span class="tt-key" style="background:${s.color}"></span>${s.name}</span><b>${val}</b></div>`;
     }
     tt.innerHTML = `<div class="tt-year">${year >= 10000 ? year.toLocaleString() : year}</div>` + rows;
@@ -837,7 +874,7 @@ function attachHover(kind, xs, series, toY) {
   svg.addEventListener('pointerleave', onLeave);
 }
 
-function renderAllCharts() { for (const k of ['temp', 'cost', 'emis']) renderChart(k); }
+function renderAllCharts() { for (const k of ['temp', 'cost', 'disc', 'emis']) renderChart(k); }
 
 /* range buttons */
 for (const div of document.querySelectorAll('.ranges')) {
