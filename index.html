@@ -1,0 +1,914 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Interactive multi-millennial cost comparison of stratospheric aerosol injection versus rapid mitigation with carbon removal, both ending at 1.5C.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>&#127777;</text></svg>">
+<title>SRM Forever?</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@500;700;800&family=Source+Sans+3:ital,wght@0,400;0,600;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+  :root {
+    color-scheme: light;
+    --page:        #f4f6f8;
+    --surface:     #fcfdfe;
+    --ink:         #101418;
+    --ink-2:       #4a5560;
+    --ink-3:       #808a94;
+    --grid:        #e2e6ea;
+    --axis:        #c2c9d0;
+    --border:      rgba(16,20,24,0.10);
+    --mit:         #2a78d6;   /* mitigation + CDR series */
+    --srm:         #eb6834;   /* SRM scenario series */
+    --good:        #006300;
+    --warn-bg:     #fdf3e4;
+    --warn-border: #e8c98a;
+    --input-bg:    #ffffff;
+    --tile-bg:     #fcfdfe;
+    --btn-active:  #101418;
+    --btn-active-ink: #fcfdfe;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:where(:not([data-theme="light"])) {
+      color-scheme: dark;
+      --page:        #101214;
+      --surface:     #191c1f;
+      --ink:         #f2f4f6;
+      --ink-2:       #b8c0c8;
+      --ink-3:       #848d96;
+      --grid:        #2a2e33;
+      --axis:        #3a4046;
+      --border:      rgba(255,255,255,0.10);
+      --mit:         #3987e5;
+      --srm:         #e0642f;
+      --good:        #0ca30c;
+      --warn-bg:     #2a2214;
+      --warn-border: #6b5526;
+      --input-bg:    #101214;
+      --tile-bg:     #191c1f;
+      --btn-active:  #f2f4f6;
+      --btn-active-ink: #101214;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --page:        #101214;
+    --surface:     #191c1f;
+    --ink:         #f2f4f6;
+    --ink-2:       #b8c0c8;
+    --ink-3:       #848d96;
+    --grid:        #2a2e33;
+    --axis:        #3a4046;
+    --border:      rgba(255,255,255,0.10);
+    --mit:         #3987e5;
+    --srm:         #e0642f;
+    --good:        #0ca30c;
+    --warn-bg:     #2a2214;
+    --warn-border: #6b5526;
+    --input-bg:    #101214;
+    --tile-bg:     #191c1f;
+    --btn-active:  #f2f4f6;
+    --btn-active-ink: #101214;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    background: var(--page);
+    color: var(--ink);
+    font-family: "Source Sans 3", system-ui, -apple-system, "Segoe UI", sans-serif;
+    font-size: 16px;
+    line-height: 1.5;
+    margin: 0;
+    padding: 2.5rem 1.25rem 4rem;
+  }
+  .wrap { max-width: 1080px; margin: 0 auto; display: flex; flex-direction: column; gap: 1.5rem; }
+
+  header h1 {
+    font-family: "Schibsted Grotesk", system-ui, sans-serif;
+    font-weight: 800;
+    font-size: clamp(1.9rem, 4.5vw, 2.6rem);
+    letter-spacing: -0.02em;
+    margin: 0 0 0.4rem;
+    text-wrap: balance;
+  }
+  header p { color: var(--ink-2); max-width: 68ch; margin: 0; }
+  .eyebrow {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    margin: 0 0 0.6rem;
+  }
+
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1.1rem 1.25rem 1.25rem;
+  }
+  .panel h2 {
+    font-family: "Schibsted Grotesk", system-ui, sans-serif;
+    font-weight: 700;
+    font-size: 1.05rem;
+    margin: 0 0 0.2rem;
+  }
+  .panel .sub { color: var(--ink-3); font-size: 0.85rem; margin: 0 0 0.9rem; }
+
+  /* Controls */
+  .controls { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 0.8rem 1rem; }
+  .field label {
+    display: block;
+    font-size: 0.76rem;
+    font-weight: 600;
+    color: var(--ink-2);
+    margin-bottom: 0.25rem;
+    line-height: 1.25;
+  }
+  .field .unit { color: var(--ink-3); font-weight: 400; }
+  .field input[type=number], .field select {
+    width: 100%;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.9rem;
+    padding: 0.4rem 0.5rem;
+    border: 1px solid var(--axis);
+    border-radius: 6px;
+    background: var(--input-bg);
+    color: var(--ink);
+  }
+  .field input:focus-visible, .field select:focus-visible, button:focus-visible {
+    outline: 2px solid var(--mit);
+    outline-offset: 1px;
+  }
+  .ctrl-note { grid-column: 1 / -1; font-size: 0.8rem; color: var(--ink-3); margin: 0; }
+  .tip {
+    display: inline-block;
+    margin-left: 0.15rem;
+    color: var(--ink-3);
+    cursor: help;
+    font-size: 0.9em;
+    line-height: 1;
+    font-weight: 400;
+    border-radius: 50%;
+  }
+  .tip:hover, .tip:focus-visible { color: var(--mit); }
+  .tooltip.info-tip { position: fixed; font-weight: 400; max-width: 300px; line-height: 1.45; color: var(--ink-2); }
+
+  /* Stat tiles */
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(215px, 1fr)); gap: 0.8rem; }
+  .tile {
+    background: var(--tile-bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 0.9rem 1rem;
+  }
+  .tile .t-label { font-size: 0.8rem; color: var(--ink-2); margin: 0 0 0.15rem; display: flex; align-items: center; gap: 0.45rem; }
+  .tile .t-label .key { width: 10px; height: 10px; border-radius: 3px; flex: none; }
+  .tile .t-value {
+    font-family: "Schibsted Grotesk", system-ui, sans-serif;
+    font-weight: 700; font-size: 1.65rem; letter-spacing: -0.01em; line-height: 1.15;
+  }
+  .tile .t-range { font-family: "IBM Plex Mono", monospace; font-size: 0.74rem; color: var(--ink-3); margin-top: 0.15rem; }
+  .tile.verdict .t-value { font-size: 1.35rem; }
+
+  /* Charts */
+  .chart-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.4rem 1rem; justify-content: space-between; margin-bottom: 0.35rem; }
+  .legend { display: flex; flex-wrap: wrap; gap: 0.35rem 1.1rem; font-size: 0.82rem; color: var(--ink-2); margin: 0.1rem 0 0.5rem; }
+  .legend .li { display: inline-flex; align-items: center; gap: 0.4rem; }
+  .legend svg { flex: none; }
+  .ranges { display: flex; gap: 0.35rem; flex-wrap: wrap; }
+  .ranges button {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.74rem;
+    padding: 0.25rem 0.6rem;
+    border: 1px solid var(--axis);
+    border-radius: 999px;
+    background: var(--surface);
+    color: var(--ink-2);
+    cursor: pointer;
+  }
+  .ranges button[aria-pressed="true"] { background: var(--btn-active); color: var(--btn-active-ink); border-color: var(--btn-active); }
+  .chart-box { position: relative; }
+  .chart-box svg { display: block; width: 100%; height: auto; }
+  .tooltip {
+    position: absolute; pointer-events: none; display: none;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.18);
+    padding: 0.45rem 0.6rem; font-size: 0.78rem; min-width: 175px; z-index: 5;
+  }
+  .tooltip .tt-year { font-family: "IBM Plex Mono", monospace; font-weight: 600; margin-bottom: 0.2rem; }
+  .tooltip .tt-row { display: flex; justify-content: space-between; gap: 0.8rem; color: var(--ink-2); }
+  .tooltip .tt-row b { font-family: "IBM Plex Mono", monospace; font-weight: 500; color: var(--ink); }
+  .tooltip .tt-key { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 0.35rem; }
+
+  .axis-label { font-size: 0.72rem; fill: var(--ink-3); font-family: "IBM Plex Mono", monospace; }
+  .axis-title { font-size: 0.74rem; fill: var(--ink-2); font-family: "Source Sans 3", sans-serif; }
+  .direct-label { font-size: 0.76rem; font-weight: 600; fill: var(--ink-2); font-family: "Source Sans 3", sans-serif; }
+
+  .callout {
+    background: var(--warn-bg);
+    border: 1px solid var(--warn-border);
+    border-radius: 10px;
+    padding: 0.8rem 1rem;
+    font-size: 0.88rem;
+    color: var(--ink-2);
+  }
+  .callout b { color: var(--ink); }
+
+  details.methods { border: 1px solid var(--border); border-radius: 10px; background: var(--surface); }
+  details.methods summary {
+    cursor: pointer; padding: 0.85rem 1.25rem;
+    font-family: "Schibsted Grotesk", system-ui, sans-serif; font-weight: 700; font-size: 1rem;
+  }
+  details.methods .inner { padding: 0 1.25rem 1.25rem; color: var(--ink-2); font-size: 0.92rem; }
+  details.methods h3 { color: var(--ink); font-size: 0.95rem; margin: 1.1rem 0 0.3rem; font-family: "Schibsted Grotesk", sans-serif; }
+  details.methods ul { padding-left: 1.2rem; margin: 0.3rem 0; }
+  details.methods li { margin-bottom: 0.3rem; }
+  details.methods a { color: var(--mit); }
+  details.methods code { font-family: "IBM Plex Mono", monospace; font-size: 0.85em; }
+
+  .table-wrap { overflow-x: auto; }
+  table.data {
+    border-collapse: collapse; font-size: 0.8rem; width: 100%;
+    font-family: "IBM Plex Mono", monospace; font-variant-numeric: tabular-nums;
+  }
+  table.data th, table.data td { padding: 0.3rem 0.6rem; text-align: right; border-bottom: 1px solid var(--grid); white-space: nowrap; }
+  table.data th { color: var(--ink-2); font-weight: 600; font-family: "Source Sans 3", sans-serif; }
+  table.data td:first-child, table.data th:first-child { text-align: left; }
+
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <p class="eyebrow">Interactive scenario model &middot; multi-millennial horizon</p>
+    <h1>SRM Forever?</h1>
+    <p>Could it make economic sense to decarbonize slowly while holding global temperature at 1.5&nbsp;&deg;C with stratospheric aerosol injection for as long as it takes, rather than mitigating rapidly and drawing temperatures back down with carbon removal? Both paths reach zero emissions and end at 1.5&nbsp;&deg;C &mdash; they differ in how fast, and in how long the commitment runs. In the SRM scenario, deployment continues until slow post-emission cooling (the ZEC drift) returns the underlying climate to the target on its own. A deliberately simple TCRE-based model; every number on this page recomputes from the inputs below.</p>
+  </header>
+
+  <section class="panel">
+    <h2>Inputs</h2>
+    <p class="sub">Defaults: SAI cost anchor from Smith (2020) with Niemeier &amp; Timmreck (2015) forcing saturation (exponent 1.3), AR6 TCRE likely range, ZEC anchored at &minus;0.1&nbsp;&deg;C per 1,000 years.</p>
+    <div class="controls">
+      <div class="field">
+        <label for="in-srmcost">SRM cost <span class="unit">($B/yr per 0.1&nbsp;&deg;C)</span> <span class="tip" tabindex="0" data-tip="Annual deployment cost of stratospheric aerosol injection per 0.1&deg;C of cooling held, at small cooling. Smith (2020): ~$1.8B in 2020 USD (aircraft fleet + operations, ~$2,200&ndash;3,000 per ton SO&#8322;); Smith &amp; Wagner (2018) imply ~$1.4B; unverified high-altitude platform estimates reach ~$4.3B. Reasonable range ~1.4&ndash;4.5.">&#9432;</span></label>
+        <input id="in-srmcost" type="number" value="1.8" step="0.1" min="0">
+      </div>
+      <div class="field">
+        <label for="in-srmexp">SRM cost nonlinearity <span class="unit">(exponent)</span> <span class="tip" tabindex="0" data-tip="How cost scales with total cooling: cost &prop; (cooling/0.1&deg;C)^k. 1.0 = constant cost per degree (Smith 2020). 1.3 (default) matches the Niemeier &amp; Timmreck (2015) forcing-saturation curve over this scenario&rsquo;s 1&ndash;2.3&deg;C peak-cooling range; ~1.5&ndash;1.6 matches it near 3&deg;C. Kleinschmitt et al. (2018) imply a hard ceiling (~1.3&deg;C for equatorial injection) no exponent captures. Range 1.0&ndash;1.6.">&#9432;</span></label>
+        <input id="in-srmexp" type="number" value="1.3" step="0.1" min="1" max="3">
+      </div>
+      <div class="field">
+        <label for="in-mitcost">Mitigation cost <span class="unit">($/tCO&#8322;)</span> <span class="tip" tabindex="0" data-tip="Average cost per ton of CO&#8322; abated, charged while a path&rsquo;s gross emissions are still falling. A single flat price standing in for a rising marginal abatement cost curve; global-average estimates for deep decarbonization span roughly $10&ndash;100/t. Default $30.">&#9432;</span></label>
+        <input id="in-mitcost" type="number" value="30" step="5" min="0">
+      </div>
+      <div class="field">
+        <label for="in-cdrcost">CDR cost <span class="unit">($/tCO&#8322;)</span> <span class="tip" tabindex="0" data-tip="Cost per ton of durable carbon removal, flat for the whole drawdown. Engineered removal today runs ~$100&ndash;600+/t; $100 (default) assumes substantial long-run learning. Reasonable range ~50&ndash;300.">&#9432;</span></label>
+        <input id="in-cdrcost" type="number" value="100" step="10" min="0">
+      </div>
+      <div class="field">
+        <label for="in-cdrrate">CDR rate <span class="unit">(GtCO&#8322;/yr)</span> <span class="tip" tabindex="0" data-tip="Sustained global carbon-removal capacity deployed from 2070 until temperatures return to the target. Integrated-assessment scenarios typically sustain ~2&ndash;10 GtCO&#8322;/yr; the rate sets how long the drawdown phase lasts.">&#9432;</span></label>
+        <input id="in-cdrrate" type="number" value="2" step="1" min="0.5">
+      </div>
+      <div class="field">
+        <label for="in-zec">ZEC drift <span class="unit">(&deg;C per 1,000 yr)</span> <span class="tip" tabindex="0" data-tip="Slow temperature drift after emissions cease, standing in for ocean heat uptake and multi-millennial carbon-cycle drawdown. AR6 assesses ZEC only on 50&ndash;100 yr timescales (ZEC50 mean &minus;0.08&deg;C, 5&ndash;95% &minus;0.34 to +0.28, low confidence in sign); the per-millennium rate is this tool&rsquo;s own anchor. It sets the SRM end date: half the drift, twice the commitment; &ge;0 means SRM never ends. Try &minus;0.3 to 0.">&#9432;</span></label>
+        <input id="in-zec" type="number" value="-0.1" step="0.05">
+      </div>
+      <div class="field">
+        <label for="in-disc">Discount rate <span class="unit">(%/yr)</span> <span class="tip" tabindex="0" data-tip="Constant exponential discount rate applied to all future costs. This single choice dominates the verdict: at 0% every generation counts equally and millennia of SRM operations accumulate; above ~1% costs beyond a few centuries vanish. Social discounting debates span ~0&ndash;3% (Stern 1.4%, US OMB 2%, Nordhaus ~3&ndash;4%+).">&#9432;</span></label>
+        <input id="in-disc" type="number" value="1" step="0.25" min="0" max="10">
+      </div>
+      <div class="field">
+        <label for="in-tcre">TCRE central <span class="unit">(&deg;C / 1,000 GtCO&#8322;)</span> <span class="tip" tabindex="0" data-tip="Transient climate response to cumulative CO&#8322; emissions. AR6 best estimate: 0.45&deg;C per 1,000 GtCO&#8322; (1.65&deg;C per 1,000 PgC), SPM D.1.1. Linearity holds with high confidence to ~5,500 GtCO&#8322; cumulative.">&#9432;</span></label>
+        <input id="in-tcre" type="number" value="0.45" step="0.01" min="0.05">
+      </div>
+      <div class="field">
+        <label for="in-tcrelo">TCRE low <span class="unit">(likely)</span> <span class="tip" tabindex="0" data-tip="Lower bound of the AR6 likely (17th&ndash;83rd percentile) TCRE range: 0.27&deg;C per 1,000 GtCO&#8322;. Drives the low edge of the shaded bands and tile ranges.">&#9432;</span></label>
+        <input id="in-tcrelo" type="number" value="0.27" step="0.01" min="0.01">
+      </div>
+      <div class="field">
+        <label for="in-tcrehi">TCRE high <span class="unit">(likely)</span> <span class="tip" tabindex="0" data-tip="Upper bound of the AR6 likely (17th&ndash;83rd percentile) TCRE range: 0.63&deg;C per 1,000 GtCO&#8322;. Drives the high edge of the shaded bands, the peak SRM cooling, and the simulation horizon.">&#9432;</span></label>
+        <input id="in-tcrehi" type="number" value="0.63" step="0.01" min="0.01">
+      </div>
+      <div class="field">
+        <label for="in-target">Temperature target <span class="unit">(&deg;C vs 1850&ndash;1900)</span> <span class="tip" tabindex="0" data-tip="The temperature SRM holds and CDR returns the climate to, relative to 1850&ndash;1900. Default 1.5&deg;C = assumed 2025 warming, so SRM starts immediately; raising it (e.g. 1.7&ndash;2.0) delays SRM onset, shrinks peak cooling, and shortens both programs.">&#9432;</span></label>
+        <input id="in-target" type="number" value="1.5" step="0.1" min="1">
+      </div>
+      <div class="field">
+        <label for="in-acct">Cost accounting <span class="tip" tabindex="0" data-tip="Total: both scenarios pay the mitigation price on all abatement below a constant 40 GtCO&#8322;/yr baseline (each path&rsquo;s full decarbonization bill is priced). Incremental: the SRM path is the shared reference, so only the differences between scenarios are priced. Affects every cost output, including the breakeven discount rate; with transition-only abatement the scenario gap is somewhat larger under total.">&#9432;</span></label>
+        <select id="in-acct">
+          <option value="total" selected>Total (vs constant 40 Gt)</option>
+          <option value="incremental">Incremental (vs SRM path)</option>
+        </select>
+      </div>
+      <p class="ctrl-note">Total accounting (default) prices each scenario&rsquo;s full decarbonization against a constant 40 GtCO&#8322;/yr baseline; incremental accounting prices only the differences from the SRM scenario&rsquo;s emissions path. Either way, abatement is charged only while a path&rsquo;s gross emissions are still falling (through 2070 for the mitigation path, 2200 for the SRM path); a decarbonized economy is treated as self-sustaining thereafter.</p>
+    </div>
+  </section>
+
+  <section class="tiles" id="tiles" aria-live="polite"></section>
+
+  <div class="callout" id="feasibility-note"></div>
+
+  <section class="panel">
+    <div class="chart-head">
+      <div>
+        <h2>Global mean temperature</h2>
+        <p class="sub" style="margin-bottom:0">&deg;C above 1850&ndash;1900. Shaded bands span the AR6 TCRE likely range.</p>
+      </div>
+      <div class="ranges" data-chart="temp" role="group" aria-label="Time range"></div>
+    </div>
+    <div class="legend" id="legend-temp"></div>
+    <div class="chart-box" id="chart-temp"></div>
+  </section>
+
+  <section class="panel">
+    <div class="chart-head">
+      <div>
+        <h2>Annual cost</h2>
+        <p class="sub" style="margin-bottom:0">Billion $ per year (undiscounted), central TCRE. Band spans the TCRE likely range.</p>
+      </div>
+      <div class="ranges" data-chart="cost" role="group" aria-label="Time range"></div>
+    </div>
+    <div class="legend" id="legend-cost"></div>
+    <div class="chart-box" id="chart-cost"></div>
+  </section>
+
+  <section class="panel">
+    <div class="chart-head">
+      <div>
+        <h2>Net CO&#8322; emissions</h2>
+        <p class="sub" style="margin-bottom:0">GtCO&#8322; per year. The mitigation scenario goes net-negative while CDR runs.</p>
+      </div>
+      <div class="ranges" data-chart="emis" role="group" aria-label="Time range"></div>
+    </div>
+    <div class="legend" id="legend-emis"></div>
+    <div class="chart-box" id="chart-emis"></div>
+  </section>
+
+  <details class="methods">
+    <summary>Data table: key years</summary>
+    <div class="inner table-wrap" id="table-wrap"></div>
+  </details>
+
+  <details class="methods">
+    <summary>Methods, sources &amp; caveats</summary>
+    <div class="inner" id="methods-body"></div>
+  </details>
+</div>
+
+<script>
+'use strict';
+/* ============================== MODEL ============================== */
+const START = 2025, T0 = 1.5, MAXHORIZON = 100000;
+let N = 0, END = 0;   /* set by setHorizon() each recompute */
+
+/* Horizon runs until the last TCRE variant's SRM requirement ends (underlying
+   warming drifts back to target via ZEC), padded 5%, capped at MAXHORIZON. */
+function setHorizon(p) {
+  let cumTotal = 0;
+  for (let y = START; y < 2200; y++) cumTotal += grossEmisSRM(y);
+  let iEnd = MAXHORIZON;
+  if (p.zec < 0) {
+    const excess = (T0 - p.target) + Math.max(p.tcre, p.tcreLo, p.tcreHi) * cumTotal / 1000;
+    iEnd = excess <= 0 ? 0 : excess * 1000 / (-p.zec);
+  }
+  N = Math.min(MAXHORIZON, Math.max(2000, Math.ceil(iEnd * 1.05) + 300)) + 1;
+  END = START + N - 1;
+}
+
+function grossEmisSRM(year) {
+  if (year < 2030) return 40;
+  if (year < 2200) return 40 * (1 - (year - 2030) / (2200 - 2030));
+  return 0;
+}
+function grossEmisMit(year) {
+  if (year < 2030) return 40;
+  if (year < 2070) return 40 * (1 - (year - 2030) / (2070 - 2030));
+  return 0;
+}
+
+function readParams() {
+  const v = id => parseFloat(document.getElementById(id).value);
+  return {
+    srmCost: v('in-srmcost'), srmExp: v('in-srmexp'),
+    mitCost: v('in-mitcost'), cdrCost: v('in-cdrcost'), cdrRate: v('in-cdrrate'),
+    zec: v('in-zec'), disc: v('in-disc') / 100,
+    tcre: v('in-tcre'), tcreLo: v('in-tcrelo'), tcreHi: v('in-tcrehi'),
+    target: v('in-target'),
+    acct: document.getElementById('in-acct').value
+  };
+}
+
+/* Simulate one TCRE variant. Returns typed arrays + summary scalars. */
+function simulate(tcre, p) {
+  const tNoSRM = new Float64Array(N), tMit = new Float64Array(N);
+  const cSRM = new Float64Array(N), cMit = new Float64Array(N);
+  const eS = new Float64Array(N), eM = new Float64Array(N);
+  let cumS = 0, cumM = 0, cdrDone = false, cdrStop = null;
+  let npvS = 0, npvM = 0, sumS = 0, sumM = 0;
+  let peakMit = -Infinity, peakMitYr = null, maxCool = 0, maxCoolYr = null, srmEnd = null;
+  for (let i = 0; i < N; i++) {
+    const year = START + i;
+    const gS = grossEmisSRM(year);
+    const gM = grossEmisMit(year);
+    const zecTerm = p.zec * i / 1000;
+    /* floored at preindustrial: the drift proxies carbon-cycle drawdown, which stops at zero perturbation */
+    const tS = Math.max(0, T0 + tcre * cumS / 1000 + zecTerm);
+    const tM = Math.max(0, T0 + tcre * cumM / 1000 + zecTerm);
+    tNoSRM[i] = tS; tMit[i] = tM;
+    if (tM > peakMit) { peakMit = tM; peakMitYr = year; }
+    let netM = gM;
+    let cdrNow = false;
+    if (year >= 2070 && !cdrDone) {
+      if (tM > p.target) { cdrNow = true; netM = gM - p.cdrRate; }
+      else { cdrDone = true; cdrStop = year; }
+    }
+    eS[i] = gS; eM[i] = netM;
+    const cool = Math.max(0, tS - p.target);
+    if (cool > maxCool) { maxCool = cool; maxCoolYr = year; }
+    if (cool > 0) srmEnd = year + 1;   /* SRM no longer needed from this year on */
+    const srmDeploy = p.srmCost * Math.pow(cool / 0.1, p.srmExp);
+    /* abatement charged only during each path's transition; free once at its floor */
+    const mitPays = year < 2070;
+    const srmPays = year < 2200;
+    const abateS = p.acct === 'total' && srmPays ? (40 - gS) * p.mitCost : 0;
+    const abateM = p.acct === 'total'
+      ? (mitPays ? (40 - gM) * p.mitCost : 0)
+      : (mitPays ? (gS - gM) * p.mitCost : 0);   /* incremental: wedge below the SRM path */
+    cSRM[i] = abateS + srmDeploy;
+    cMit[i] = abateM + (cdrNow ? p.cdrRate * p.cdrCost : 0);
+    const df = Math.pow(1 + p.disc, -i);
+    npvS += cSRM[i] * df; npvM += cMit[i] * df;
+    sumS += cSRM[i]; sumM += cMit[i];
+    cumS += gS; cumM += netM;
+  }
+  return { tcre, tNoSRM, tMit, cSRM, cMit, eS, eM, npvS, npvM, sumS, sumM,
+           cdrStop, peakMit, peakMitYr, maxCool, maxCoolYr, srmEnd, cumS };
+}
+
+/* NPV-only pass for breakeven search */
+function npvDiff(p, r) {
+  let cumS = 0, cumM = 0, cdrDone = false, d = 0;
+  for (let i = 0; i < N; i++) {
+    const year = START + i;
+    const gS = grossEmisSRM(year), gM = grossEmisMit(year);
+    const zecTerm = p.zec * i / 1000;
+    const tS = Math.max(0, T0 + p.tcre * cumS / 1000 + zecTerm);
+    const tM = Math.max(0, T0 + p.tcre * cumM / 1000 + zecTerm);
+    let netM = gM, cdrNow = false;
+    if (year >= 2070 && !cdrDone) {
+      if (tM > p.target) { cdrNow = true; netM = gM - p.cdrRate; } else cdrDone = true;
+    }
+    const cool = Math.max(0, tS - p.target);
+    const mitPays = year < 2070, srmPays = year < 2200;
+    const cS = (p.acct === 'total' && srmPays ? (40 - gS) * p.mitCost : 0)
+             + p.srmCost * Math.pow(cool / 0.1, p.srmExp);
+    const cM = (p.acct === 'total'
+              ? (mitPays ? (40 - gM) * p.mitCost : 0)
+              : (mitPays ? (gS - gM) * p.mitCost : 0))
+             + (cdrNow ? p.cdrRate * p.cdrCost : 0);
+    d += (cS - cM) * Math.pow(1 + r, -i);
+    cumS += gS; cumM += netM;
+  }
+  return d; /* positive => SRM more expensive */
+}
+
+function breakevenRate(p) {
+  /* find r in [0, 10%] where NPV(SRM) - NPV(Mit) = 0 */
+  let lo = 0, hi = 0.10;
+  let fLo = npvDiff(p, lo), fHi = npvDiff(p, hi);
+  if (fLo * fHi > 0) return null;
+  for (let k = 0; k < 40; k++) {
+    const mid = (lo + hi) / 2, fm = npvDiff(p, mid);
+    if (fLo * fm <= 0) { hi = mid; fHi = fm; } else { lo = mid; fLo = fm; }
+  }
+  return (lo + hi) / 2;
+}
+
+/* ============================== FORMATTING ============================== */
+function fmtMoney(b) { /* input $B */
+  const sign = b < 0 ? '\u2212' : '';
+  const a = Math.abs(b);
+  if (a >= 1e6) return sign + '$' + (a / 1e6).toPrecision(3) + 'Q';
+  if (a >= 1000) return sign + '$' + (a / 1000).toPrecision(3) + 'T';
+  if (a >= 1) return sign + '$' + a.toPrecision(3) + 'B';
+  return sign + '$' + (a * 1000).toPrecision(3) + 'M';
+}
+function fmtPct(x) { return (x * 100).toFixed(2) + '%'; }
+function fmtYr(y) { return y == null || y > END ? 'beyond horizon' : (y >= 10000 ? y.toLocaleString() : String(y)); }
+function fmtT(x) { return x.toFixed(2) + '\u00b0C'; }
+
+/* ============================== STATE ============================== */
+let sims = null, params = null, beRate = null;
+const RANGES = [
+  { label: '2300', to: 2300, log: false },
+  { label: '2500', to: 2500, log: false },
+  { label: '5000', to: 5000, log: false },
+  { label: 'full (log)', to: null, log: true }
+];
+const rangeState = { temp: 0, cost: 3, emis: 0 };
+
+function recompute() {
+  params = readParams();
+  if (![params.srmCost, params.mitCost, params.cdrCost, params.cdrRate, params.zec,
+        params.disc, params.tcre, params.tcreLo, params.tcreHi, params.target, params.srmExp]
+        .every(Number.isFinite)) return;
+  setHorizon(params);
+  sims = {
+    lo: simulate(params.tcreLo, params),
+    mid: simulate(params.tcre, params),
+    hi: simulate(params.tcreHi, params)
+  };
+  beRate = breakevenRate(params);
+  renderTiles();
+  renderNote();
+  renderAllCharts();
+  renderTable();
+  renderMethodsDynamic();
+}
+
+/* ============================== TILES ============================== */
+function tile(label, value, range, keyColor) {
+  return `<div class="tile">
+    <p class="t-label">${keyColor ? `<span class="key" style="background:${keyColor}"></span>` : ''}${label}</p>
+    <div class="t-value">${value}</div>
+    ${range ? `<div class="t-range">${range}</div>` : ''}
+  </div>`;
+}
+function renderTiles() {
+  const { lo, mid, hi } = sims;
+  const el = document.getElementById('tiles');
+  const dMid = mid.npvS - mid.npvM;
+  const cheaper = dMid < 0 ? 'SRM scenario' : 'Mitigation + CDR';
+  const dLo = Math.min(lo.npvS - lo.npvM, hi.npvS - hi.npvM);
+  const dHi = Math.max(lo.npvS - lo.npvM, hi.npvS - hi.npvM);
+  el.innerHTML =
+    tile('NPV, SRM scenario', fmtMoney(mid.npvS),
+         `${fmtMoney(Math.min(lo.npvS, hi.npvS))} \u2013 ${fmtMoney(Math.max(lo.npvS, hi.npvS))} (TCRE likely)`,
+         'var(--srm)') +
+    tile('NPV, mitigation + CDR', fmtMoney(mid.npvM),
+         `${fmtMoney(Math.min(lo.npvM, hi.npvM))} \u2013 ${fmtMoney(Math.max(lo.npvM, hi.npvM))} (TCRE likely)`,
+         'var(--mit)') +
+    `<div class="tile verdict">
+       <p class="t-label">Cheaper at ${fmtPct(params.disc)}/yr discounting</p>
+       <div class="t-value">${cheaper}</div>
+       <div class="t-range">\u0394NPV (SRM \u2212 mit): ${fmtMoney(dMid)} [${fmtMoney(dLo)} to ${fmtMoney(dHi)}]</div>
+     </div>` +
+    tile('Breakeven discount rate', beRate == null ? 'none in 0\u201310%' : fmtPct(beRate),
+         beRate == null ? 'one scenario cheaper across range' : 'below this, mitigation + CDR wins') +
+    tile('CDR runs until', mid.cdrStop ? String(mid.cdrStop) : 'beyond horizon',
+         mid.cdrStop ? `${mid.cdrStop - 2070} years at ${params.cdrRate} GtCO\u2082/yr` : '') +
+    tile('SRM runs until',
+         mid.srmEnd && mid.srmEnd <= END ? mid.srmEnd.toLocaleString() : `beyond ${END.toLocaleString()}`,
+         `${fmtYr(lo.srmEnd)} \u2013 ${fmtYr(hi.srmEnd)} across TCRE likely; peak cooling ${fmtT(mid.maxCool)} (${fmtT(Math.min(lo.maxCool, hi.maxCool))} \u2013 ${fmtT(Math.max(lo.maxCool, hi.maxCool))}) near ${mid.maxCoolYr}`);
+}
+
+function renderNote() {
+  const { lo, mid, hi } = sims;
+  const el = document.getElementById('feasibility-note');
+  const cum = Math.round(mid.cumS / 100) * 100;
+  if (params.zec >= 0) {
+    el.innerHTML = `<b>Feasibility flag:</b> with ZEC drift \u2265 0 the underlying warming never returns to
+      ${fmtT(params.target)}, so the SRM commitment has no end date (simulation capped at ${END.toLocaleString()}).
+      Set a negative ZEC drift for a finite comparison.`;
+    return;
+  }
+  const dur = mid.srmEnd ? (mid.srmEnd - START).toLocaleString() : 'over ' + (END - START).toLocaleString();
+  el.innerHTML = `<b>The commitment:</b> both scenarios end at ${fmtT(params.target)} with zero emissions
+    (cumulative ~${cum.toLocaleString()} GtCO\u2082 in the SRM scenario, within AR6\u2019s TCRE high-confidence
+    domain), and peak cooling of ${fmtT(mid.maxCool)} is within the range SAI is thought able to deliver.
+    What differs is duration: SRM must run ~${dur} years \u2014 until ${fmtYr(mid.srmEnd)}
+    (${fmtYr(lo.srmEnd)} to ${fmtYr(hi.srmEnd)} across the TCRE likely range) \u2014 with abrupt termination
+    risk carried the whole way, and the end date rests on extrapolating the ZEC drift over many millennia,
+    which AR6 does not assess. The mitigation scenario is done by ${mid.cdrStop ?? 'beyond horizon'}.`;
+}
+
+/* ============================== CHART CORE ============================== */
+const CW = 1040, CH = 380, M = { t: 14, r: 142, b: 46, l: 58 };
+
+function xScaleFor(rangeIdx) {
+  const r = RANGES[rangeIdx];
+  const to = Math.min(r.to == null ? END : r.to, END);
+  if (!r.log) {
+    return { toX: y => M.l + (y - START) / (to - START) * (CW - M.l - M.r),
+             fromX: px => START + (px - M.l) / (CW - M.l - M.r) * (to - START),
+             ticks: linearYearTicks(to), to };
+  }
+  const lmin = Math.log10(1), lmax = Math.log10(to - START + 1);
+  const cand = [2030, 2050, 2100, 2200, 2500, 3000, 5000, 10000, 20000, 50000];
+  const ticks = cand.filter(y => Math.log10(y - START + 1) < lmax - 0.14);
+  ticks.push(to);
+  return { toX: y => M.l + (Math.log10(y - START + 1) - lmin) / (lmax - lmin) * (CW - M.l - M.r),
+           fromX: px => START - 1 + Math.pow(10, lmin + (px - M.l) / (CW - M.l - M.r) * (lmax - lmin)),
+           ticks, to };
+}
+function linearYearTicks(to) {
+  const span = to - START;
+  const step = span <= 300 ? 50 : span <= 600 ? 100 : 500;
+  const ticks = [];
+  for (let y = Math.ceil(START / step) * step; y <= to; y += step) ticks.push(y);
+  if (ticks[0] > START + step * 0.3) ticks.unshift(START);
+  return ticks;
+}
+function niceValTicks(min, max, n = 5) {
+  const span = max - min || 1;
+  const raw = span / n;
+  const mag = Math.pow(10, Math.floor(Math.log10(raw)));
+  const norm = raw / mag;
+  const step = (norm <= 1 ? 1 : norm <= 2 ? 2 : norm <= 5 ? 5 : 10) * mag;
+  const t0 = Math.ceil(min / step) * step, ticks = [];
+  for (let v = t0; v <= max + 1e-9; v += step) ticks.push(v);
+  return ticks;
+}
+/* sample indices for drawing: dense early, sparse late */
+function sampleIdx(toYear) {
+  const idx = [];
+  const last = toYear - START;
+  let i = 0;
+  while (i <= last) {
+    idx.push(i);
+    if (i < 375) i += 1;
+    else if (i < 1000) i += 5;
+    else if (i < 3000) i += 10;
+    else if (i < 20000) i += 25;
+    else i += 100;
+  }
+  if (idx[idx.length - 1] !== last) idx.push(last);
+  return idx;
+}
+function pathFrom(idx, arr, toX, toY) {
+  let d = '';
+  for (let k = 0; k < idx.length; k++) {
+    const i = idx[k];
+    d += (k ? 'L' : 'M') + toX(START + i).toFixed(1) + ',' + toY(arr[i]).toFixed(1);
+  }
+  return d;
+}
+function bandFrom(idx, aLo, aHi, toX, toY) {
+  let d = '';
+  for (let k = 0; k < idx.length; k++) {
+    const i = idx[k];
+    d += (k ? 'L' : 'M') + toX(START + i).toFixed(1) + ',' + toY(aLo[i]).toFixed(1);
+  }
+  for (let k = idx.length - 1; k >= 0; k--) {
+    const i = idx[k];
+    d += 'L' + toX(START + i).toFixed(1) + ',' + toY(aHi[i]).toFixed(1);
+  }
+  return d + 'Z';
+}
+
+function axes(xs, yTicks, toY, yTitle, yFmt) {
+  let g = '';
+  for (const v of yTicks) {
+    const y = toY(v).toFixed(1);
+    g += `<line x1="${M.l}" x2="${CW - M.r}" y1="${y}" y2="${y}" stroke="var(--grid)" stroke-width="1"/>`;
+    g += `<text class="axis-label" x="${M.l - 8}" y="${y}" dy="0.32em" text-anchor="end">${yFmt(v)}</text>`;
+  }
+  for (const yr of xs.ticks) {
+    const x = xs.toX(yr).toFixed(1);
+    g += `<line x1="${x}" x2="${x}" y1="${CH - M.b}" y2="${CH - M.b + 5}" stroke="var(--axis)" stroke-width="1"/>`;
+    g += `<text class="axis-label" x="${x}" y="${CH - M.b + 18}" text-anchor="middle">${yr >= 10000 ? yr.toLocaleString() : yr}</text>`;
+  }
+  g += `<line x1="${M.l}" x2="${CW - M.r}" y1="${CH - M.b}" y2="${CH - M.b}" stroke="var(--axis)" stroke-width="1"/>`;
+  g += `<text class="axis-title" x="${M.l}" y="${M.t - 2}" text-anchor="start">${yTitle}</text>`;
+  return g;
+}
+
+function legendItem(color, dash, label) {
+  return `<span class="li"><svg width="22" height="10" aria-hidden="true">
+    <line x1="1" x2="21" y1="5" y2="5" stroke="${color}" stroke-width="2.5"
+      ${dash ? 'stroke-dasharray="5 4"' : ''} stroke-linecap="round"/></svg>${label}</span>`;
+}
+
+/* generic chart renderer */
+function renderChart(kind) {
+  const box = document.getElementById('chart-' + kind);
+  const xs = xScaleFor(rangeState[kind]);
+  const idx = sampleIdx(xs.to);
+  const { lo, mid, hi } = sims;
+  let series, yTitle, yFmt, legendHTML, extras = '';
+
+  if (kind === 'temp') {
+    const tReal = mid.tNoSRM.map(v => Math.min(v, params.target));
+    series = [
+      { arr: mid.tNoSRM, lo: lo.tNoSRM, hi: hi.tNoSRM, color: 'var(--srm)', dash: true, name: 'SRM scenario, without SRM' },
+      { arr: tReal, color: 'var(--srm)', dash: false, name: 'SRM scenario, with SRM' },
+      { arr: mid.tMit, lo: lo.tMit, hi: hi.tMit, color: 'var(--mit)', dash: false, name: 'Mitigation + CDR' }
+    ];
+    yTitle = '\u00b0C above 1850\u20131900'; yFmt = v => v.toFixed(1);
+    legendHTML = legendItem('var(--srm)', true, 'SRM scenario (underlying, no SRM)')
+      + legendItem('var(--srm)', false, 'SRM scenario (with SRM)')
+      + legendItem('var(--mit)', false, 'Mitigation + CDR');
+  } else if (kind === 'cost') {
+    series = [
+      { arr: mid.cSRM, lo: lo.cSRM, hi: hi.cSRM, color: 'var(--srm)', dash: false, name: 'SRM scenario' },
+      { arr: mid.cMit, lo: lo.cMit, hi: hi.cMit, color: 'var(--mit)', dash: false, name: 'Mitigation + CDR' }
+    ];
+    yTitle = 'Annual cost, $B/yr'; yFmt = v => v >= 1000 ? (v / 1000) + 'k' : String(Math.round(v));
+    legendHTML = legendItem('var(--srm)', false, 'SRM scenario')
+      + legendItem('var(--mit)', false, 'Mitigation + CDR');
+  } else {
+    series = [
+      { arr: mid.eS, color: 'var(--srm)', dash: false, name: 'SRM scenario' },
+      { arr: mid.eM, color: 'var(--mit)', dash: false, name: 'Mitigation + CDR' }
+    ];
+    yTitle = 'Net GtCO\u2082/yr'; yFmt = v => String(Math.round(v));
+    legendHTML = legendItem('var(--srm)', false, 'SRM scenario')
+      + legendItem('var(--mit)', false, 'Mitigation + CDR');
+  }
+  document.getElementById('legend-' + kind).innerHTML = legendHTML;
+
+  /* y extent across drawn samples incl. bands */
+  let vMin = Infinity, vMax = -Infinity;
+  for (const s of series) {
+    const arrs = [s.arr, s.lo, s.hi].filter(Boolean);
+    if (s.flat != null) { vMin = Math.min(vMin, s.flat); vMax = Math.max(vMax, s.flat); }
+    for (const a of arrs) for (const i of idx) { const v = a[i]; if (v < vMin) vMin = v; if (v > vMax) vMax = v; }
+  }
+  if (kind === 'emis') { vMin = Math.min(vMin, -2); vMax = Math.max(vMax, 42); }
+  const pad = (vMax - vMin) * 0.07 || 1;
+  vMin -= pad; vMax += pad;
+  if (kind === 'cost') vMin = Math.min(0, vMin);
+  const toY = v => M.t + 14 + (vMax - v) / (vMax - vMin) * (CH - M.t - 14 - M.b);
+
+  let g = axes(xs, niceValTicks(vMin, vMax, 5), toY, yTitle, yFmt);
+  if (kind === 'emis' && vMin < 0) {
+    const y0 = toY(0).toFixed(1);
+    g += `<line x1="${M.l}" x2="${CW - M.r}" y1="${y0}" y2="${y0}" stroke="var(--axis)" stroke-width="1" stroke-dasharray="2 3"/>`;
+  }
+  /* bands first */
+  for (const s of series) if (s.lo && s.hi)
+    g += `<path d="${bandFrom(idx, s.lo, s.hi, xs.toX, toY)}" fill="${s.color}" opacity="0.10"/>`;
+  /* lines */
+  for (const s of series) {
+    if (s.flat != null) {
+      const xEnd = xs.toX(xs.to), y = toY(s.flat).toFixed(1);
+      g += `<line x1="${xs.toX(START).toFixed(1)}" x2="${xEnd.toFixed(1)}" y1="${y}" y2="${y}"
+             stroke="${s.color}" stroke-width="2" stroke-linecap="round"/>`;
+    } else {
+      g += `<path d="${pathFrom(idx, s.arr, xs.toX, toY)}" fill="none" stroke="${s.color}" stroke-width="2"
+             stroke-linejoin="round" stroke-linecap="round" ${s.dash ? 'stroke-dasharray="6 5"' : ''}/>`;
+    }
+  }
+  /* direct end labels */
+  const lastI = idx[idx.length - 1];
+  const placed = [];
+  for (const s of series) {
+    const v = s.flat != null ? s.flat : s.arr[lastI];
+    let y = toY(v);
+    for (const py of placed) if (Math.abs(y - py) < 14) y = py + 14;
+    placed.push(y);
+    const short = s.name.includes('Mitigation') ? 'Mitigation + CDR'
+      : s.name.includes('with SRM') ? 'with SRM' : (kind === 'temp' ? 'no SRM' : 'SRM scenario');
+    g += `<text class="direct-label" x="${CW - M.r + 8}" y="${y.toFixed(1)}" dy="0.32em">${short}</text>`;
+  }
+  box.innerHTML = `<svg viewBox="0 0 ${CW} ${CH}" role="img" aria-label="${yTitle} by year">
+      <rect x="0" y="0" width="${CW}" height="${CH}" fill="var(--surface)"/>
+      ${g}
+      <line id="xh-${kind}" y1="${M.t + 14}" y2="${CH - M.b}" stroke="var(--axis)" stroke-width="1" opacity="0"/>
+    </svg><div class="tooltip" id="tt-${kind}"></div>`;
+  attachHover(kind, xs, series, toY);
+}
+
+function attachHover(kind, xs, series, toY) {
+  const box = document.getElementById('chart-' + kind);
+  const svg = box.querySelector('svg');
+  const tt = document.getElementById('tt-' + kind);
+  const xh = document.getElementById('xh-' + kind);
+  function onMove(ev) {
+    const rect = svg.getBoundingClientRect();
+    const px = (ev.clientX - rect.left) * (CW / rect.width);
+    if (px < M.l || px > CW - M.r) { onLeave(); return; }
+    let year = Math.round(xs.fromX(px));
+    year = Math.max(START, Math.min(xs.to, year));
+    const i = year - START;
+    xh.setAttribute('x1', xs.toX(year).toFixed(1));
+    xh.setAttribute('x2', xs.toX(year).toFixed(1));
+    xh.setAttribute('opacity', '0.7');
+    let rows = '';
+    for (const s of series) {
+      const v = s.flat != null ? s.flat : s.arr[i];
+      const val = kind === 'temp' ? fmtT(v) : kind === 'cost' ? fmtMoney(v) + '/yr' : v.toFixed(1) + ' Gt';
+      rows += `<div class="tt-row"><span><span class="tt-key" style="background:${s.color}"></span>${s.name}</span><b>${val}</b></div>`;
+    }
+    tt.innerHTML = `<div class="tt-year">${year >= 10000 ? year.toLocaleString() : year}</div>` + rows;
+    tt.style.display = 'block';
+    const bw = box.clientWidth, ttw = tt.offsetWidth;
+    let left = (xs.toX(year) / CW) * bw + 14;
+    if (left + ttw > bw - 4) left = (xs.toX(year) / CW) * bw - ttw - 14;
+    tt.style.left = left + 'px';
+    tt.style.top = Math.max(4, (ev.clientY - rect.top) - 30) + 'px';
+  }
+  function onLeave() { tt.style.display = 'none'; xh.setAttribute('opacity', '0'); }
+  svg.addEventListener('pointermove', onMove);
+  svg.addEventListener('pointerleave', onLeave);
+}
+
+function renderAllCharts() { for (const k of ['temp', 'cost', 'emis']) renderChart(k); }
+
+/* range buttons */
+for (const div of document.querySelectorAll('.ranges')) {
+  const kind = div.dataset.chart;
+  RANGES.forEach((r, i) => {
+    const b = document.createElement('button');
+    b.textContent = r.label;
+    b.setAttribute('aria-pressed', String(rangeState[kind] === i));
+    b.addEventListener('click', () => {
+      rangeState[kind] = i;
+      for (const [j, btn] of [...div.children].entries()) btn.setAttribute('aria-pressed', String(j === i));
+      renderChart(kind);
+    });
+    div.appendChild(b);
+  });
+}
+
+/* ============================== TABLE ============================== */
+function renderTable() {
+  const yrs = [2030, 2050, 2070, 2100, 2150, 2200, sims.mid.cdrStop, 2300, 2500, 3000, 5000, 10000, sims.mid.srmEnd, END]
+    .filter((y, i, a) => y && y <= END && a.indexOf(y) === i).sort((a, b) => a - b);
+  const m = sims.mid;
+  let rows = '';
+  for (const y of yrs) {
+    const i = y - START;
+    rows += `<tr><td>${y >= 10000 ? y.toLocaleString() : y}</td><td>${m.eS[i].toFixed(1)}</td><td>${m.eM[i].toFixed(1)}</td>
+      <td>${m.tNoSRM[i].toFixed(2)}</td><td>${Math.min(m.tNoSRM[i], params.target).toFixed(2)}</td><td>${m.tMit[i].toFixed(2)}</td>
+      <td>${Math.round(m.cSRM[i]).toLocaleString()}</td><td>${Math.round(m.cMit[i]).toLocaleString()}</td></tr>`;
+  }
+  document.getElementById('table-wrap').innerHTML = `<table class="data">
+    <thead><tr><th>Year</th><th>SRM net Gt</th><th>Mit net Gt</th><th>T no-SRM &deg;C</th><th>T w/ SRM &deg;C</th>
+    <th>T mit &deg;C</th><th>SRM $B/yr</th><th>Mit $B/yr</th></tr></thead><tbody>${rows}</tbody></table>
+    <p style="font-size:0.8rem;color:var(--ink-3)">Central TCRE, current inputs, ${params.acct} accounting. Temperatures vs 1850&ndash;1900.</p>`;
+}
+
+/* ============================== METHODS ============================== */
+function renderMethodsDynamic() {
+  document.getElementById('methods-body').innerHTML = METHODS_HTML;
+}
+const METHODS_HTML = `
+<h3>Model structure</h3>
+<ul>
+  <li><b>Timestep and horizon.</b> Annual steps from 2025. The horizon is endogenous: the simulation runs until the highest-TCRE variant&rsquo;s SRM requirement ends (underlying warming back at the target via the ZEC drift), plus a 5% margin, capped at 100,000 years. Warming in 2025 is set to 1.5&deg;C above 1850&ndash;1900.</li>
+  <li><b>Temperature.</b> T(t) = 1.5&deg;C + TCRE &times; cumulative net CO&#8322; emissions since 2025 / 1000 + ZEC drift &times; (t &minus; 2025)/1000, floored at preindustrial (0&deg;C). The ZEC drift is applied linearly from 2025 in both scenarios. One consequence: the mitigation path reaches the target around 2233 and then keeps drifting slowly cooler, so at the SRM scenario&rsquo;s end date it sits well below the target &mdash; the scenarios match at 1.5&deg;C at the end of their respective programs, not at a common date. No cost in either scenario is affected by the post-program drift.</li>
+  <li><b>SRM scenario emissions.</b> 40 GtCO&#8322;/yr through 2030, declining linearly to zero in 2200 (~3,600 GtCO&#8322; cumulative). SRM (SAI) holds temperature at the target; the required cooling is the gap between the underlying no-SRM temperature and the target, and deployment ends when that gap closes on its own through the ZEC drift.</li>
+  <li><b>Mitigation + CDR scenario emissions.</b> 40 GtCO&#8322;/yr through 2030, declining linearly to zero in 2070. From 2070, CDR removes the set rate (default 2 GtCO&#8322;/yr) until global temperature first returns to the temperature target (default 1.5&deg;C, the same target SRM holds), then stops permanently and emissions stay at net zero.</li>
+  <li><b>SRM cost.</b> Annual cost = (cooling / 0.1&deg;C)<sup>k</sup> &times; the $B-per-0.1&deg;C input. Default k = 1.3, matching the forcing saturation of Niemeier &amp; Timmreck (2015) over this scenario&rsquo;s cooling range (see Cost nonlinearity below); k = 1 gives constant cost per degree (Smith 2020).</li>
+  <li><b>Cost accounting.</b> Total (default): both scenarios pay the mitigation price on all abatement below a constant 40 GtCO&#8322;/yr baseline, so each path&rsquo;s full decarbonization bill is priced. Incremental: the SRM scenario&rsquo;s emissions path is the shared reference, so the SRM scenario pays only for aerosol deployment and the mitigation scenario pays the mitigation price on the wedge between the two paths plus the CDR bill. Abatement is always charged only while a path&rsquo;s gross emissions are still falling (through 2070 for the mitigation path, 2200 for the SRM path), treating the decarbonized system as self-sustaining thereafter &mdash; so once CDR ends, the mitigation scenario&rsquo;s annual cost is zero. Because of this, the total accounting also bills the SRM scenario&rsquo;s own 2030&ndash;2200 decline, making the scenario difference somewhat larger under total than under incremental accounting; the accounting choice flows through every cost output, including the breakeven discount rate.</li>
+  <li><b>Discounting.</b> NPV = &Sigma; cost(t) &times; (1 + r)<sup>&minus;(t&minus;2025)</sup>, constant exponential discounting at the input rate. The breakeven rate is found by bisection on the NPV difference over 0&ndash;10%, computed under the selected cost accounting.</li>
+  <li>All costs in constant dollars (SRM costs are 2020 USD in the source); no cost growth, learning curves, or damage functions &mdash; this is a cost-only comparison, not a welfare analysis.</li>
+</ul>
+<h3>Sources (verified against primary texts)</h3>
+<ul>
+  <li><b>TCRE:</b> IPCC AR6 WG1 SPM D.1.1: &ldquo;Each 1000 GtCO2 of cumulative CO2 emissions is assessed to likely cause a 0.27&deg;C to 0.63&deg;C increase in global surface temperature with a best estimate of 0.45&deg;C.&rdquo; The range is the <i>likely</i> (central 66%) range, per Ch.5 &sect;5.5.1.4. <a href="https://www.ipcc.ch/report/ar6/wg1/downloads/report/IPCC_AR6_WGI_SPM.pdf" target="_blank" rel="noopener">AR6 WG1 SPM</a></li>
+  <li><b>TCRE validity domain:</b> AR6 WG1 Ch.5 &sect;5.5.1.2: TCRE constant with <i>high confidence</i> to at least 1,500 PgC (~5,500 GtCO&#8322;) and <i>medium confidence</i> to 3,000 PgC (~11,000 GtCO&#8322;). The SRM scenario blows far past this within a few millennia.</li>
+  <li><b>ZEC:</b> AR6 WG1 Ch.4 &sect;4.7.1.1 assesses ZEC50 (50 years after cessation, following 1000 PgC) at a mean of &minus;0.079&deg;C, 5&ndash;95% range &minus;0.34 to +0.28&deg;C, with <i>low confidence in the sign</i>. AR6 does not assess a per-millennium drift rate; the &minus;0.1&deg;C per 1,000 years default here is this tool&rsquo;s own anchor for slow post-emission cooling (ocean heat uptake and carbon-cycle drawdown), adjustable above. <a href="https://www.ipcc.ch/report/ar6/wg1/downloads/report/IPCC_AR6_WGI_Chapter04.pdf" target="_blank" rel="noopener">AR6 WG1 Ch.4</a></li>
+  <li><b>SRM cost:</b> Smith (2020), <i>Environ. Res. Lett.</i> 15, 114004: &ldquo;the annual cost to suppress 1&deg;C of warming... remains within 10% of $18 billion irrespective of the scenario chosen&rdquo; (2020 USD) &mdash; the source of the $1.8B/yr per 0.1&deg;C default, covering aircraft acquisition and operations at ~$2,200&ndash;3,000 per deployed ton of SO&#8322;. Smith &amp; Wagner (2018), <i>Environ. Res. Lett.</i> 13, 124001 imply a somewhat lower ~$1.4B per 0.1&deg;C at early-deployment scale. <a href="https://doi.org/10.1088/1748-9326/aba7e7" target="_blank" rel="noopener">doi:10.1088/1748-9326/aba7e7</a>, <a href="https://doi.org/10.1088/1748-9326/aae98d" target="_blank" rel="noopener">doi:10.1088/1748-9326/aae98d</a></li>
+  <li><b>Cost nonlinearity (default exponent 1.3):</b> SAI cost scales with injected mass, and forcing saturates with injection rate. Niemeier &amp; Timmreck (2015), <i>Atmos. Chem. Phys.</i> 15, 9129, Eq. (1), fit &Delta;R = &minus;65&thinsp;W&thinsp;m<sup>&minus;2</sup> &times; exp[&minus;(2246/x)<sup>0.23</sup>] for injection rate x in Tg&thinsp;S/yr (verified against the published equation; their headline: &minus;5.5&thinsp;W&thinsp;m<sup>&minus;2</sup> requires ~45 Tg&thinsp;S/yr). Converting with 0.7&deg;C per W&thinsp;m<sup>&minus;2</sup>, the implied local cost-vs-cooling exponent over this scenario&rsquo;s operating range (peak cooling 0.96&ndash;2.26&deg;C across the TCRE likely range) runs ~1.1&ndash;1.45, &asymp;1.3 at the central peak &mdash; hence the default. Exponent 1.0 reproduces Smith (2020)&rsquo;s near-constant $18B/&deg;C engineering model (his ~1%/Tg efficacy decline is much milder; most favorable to SRM); ~1.5&ndash;1.6 matches the N&amp;T curve if cooling approached 3&deg;C. Kleinschmitt et al. (2018), <i>Atmos. Chem. Phys.</i> 18, 2769, find stronger, non-monotonic saturation: net forcing from equatorial SO&#8322; injection peaks at ~&minus;1.9&thinsp;W&thinsp;m<sup>&minus;2</sup> (~1.3&deg;C of cooling) near 20 Tg&thinsp;S/yr and weakens beyond &mdash; a hard ceiling no finite exponent captures, below this scenario&rsquo;s central peak cooling (multi-latitude injection strategies raise it). Treat the choice among these forms as structural uncertainty, not tuning. <a href="https://acp.copernicus.org/articles/15/9129/2015/" target="_blank" rel="noopener">acp-15-9129-2015</a>, <a href="https://acp.copernicus.org/articles/18/2769/2018/" target="_blank" rel="noopener">acp-18-2769-2018</a></li>
+  <li><b>Flagged, unverified:</b> a 2022 review of high-altitude platforms (Smith et al., <i>Environ. Res. Commun.</i> 4, 011001) is reported in secondary coverage at ~$43B/yr per &deg;C at 20 km &mdash; 2.4&times; the default. We could not verify this against the paywalled primary text; try 4.3 in the SRM cost field as a sensitivity.</li>
+</ul>
+<h3>Caveats</h3>
+<ul>
+  <li><b>The SRM end date hangs entirely on the ZEC drift.</b> AR6 assesses ZEC only on 50&ndash;100 year timescales (central estimate near zero, low confidence in sign); extrapolating a constant per-millennium drift over 10,000+ years is this tool&rsquo;s own device, standing in for slow ocean heat uptake and carbon-cycle drawdown (ocean invasion, then CaCO&#8323; and silicate weathering). A drift half as strong doubles the SRM commitment; a ZEC of zero or above makes it perpetual. This single parameter deserves the most scrutiny in the comparison.</li>
+  <li><b>SAI cannot deliver unbounded cooling.</b> Forcing per unit injection saturates; offsetting more than a few &deg;C is likely infeasible regardless of budget, and Kleinschmitt et al. (2018) put the equatorial-injection ceiling near ~1.3&deg;C &mdash; below this scenario&rsquo;s central peak. The power-law cost curve captures rising marginal cost but no hard ceiling.</li>
+  <li><b>SRM &ne; a substitute for mitigation on non-temperature impacts.</b> Ocean acidification continues unabated under the SRM path; regional hydrological changes, stratospheric ozone effects, and delivery/governance costs are not priced.</li>
+  <li><b>Termination shock is not priced.</b> The SRM scenario carries a permanent obligation: stopping deployment at any point yields decades of very rapid warming toward the dashed line. A risk premium on this is arguably the largest missing cost term.</li>
+  <li><b>No damages.</b> Scenarios are compared on program cost only. The mitigation scenario has ~0.3&ndash;0.6&deg;C of overshoot for ~160 years that the SRM scenario avoids; a damage function would credit SRM for that and debit it for residual/novel risks. Neither side is counted.</li>
+  <li><b>Constant technology and prices.</b> CDR stays at the input price for centuries and mitigation at a single flat $/ton; both are strong simplifications (real MACs are convex; long-run learning could cut CDR costs substantially).</li>
+  <li><b>Discounting over millennia is an ethical choice, not a technical one.</b> At any constant positive rate, costs beyond a few centuries are invisible: that single choice, not the science, drives which scenario &ldquo;wins.&rdquo; The breakeven-rate tile makes this explicit.</li>
+</ul>`;
+
+/* ============================== INPUT INFO TOOLTIPS ============================== */
+const infoTip = document.createElement('div');
+infoTip.className = 'tooltip info-tip';
+document.body.appendChild(infoTip);
+function showInfoTip(el) {
+  infoTip.textContent = el.dataset.tip;
+  infoTip.style.display = 'block';
+  const w = Math.min(300, window.innerWidth - 16);
+  infoTip.style.width = w + 'px';
+  const r = el.getBoundingClientRect();
+  let left = r.left + r.width / 2 - w / 2;
+  left = Math.max(8, Math.min(left, window.innerWidth - w - 8));
+  infoTip.style.left = left + 'px';
+  infoTip.style.top = (r.bottom + 8) + 'px';
+}
+function hideInfoTip() { infoTip.style.display = 'none'; }
+for (const el of document.querySelectorAll('.tip')) {
+  el.setAttribute('role', 'note');
+  el.setAttribute('aria-label', el.dataset.tip);
+  el.addEventListener('mouseenter', () => showInfoTip(el));
+  el.addEventListener('mouseleave', hideInfoTip);
+  el.addEventListener('focus', () => showInfoTip(el));
+  el.addEventListener('blur', hideInfoTip);
+}
+window.addEventListener('scroll', hideInfoTip, { passive: true });
+
+/* ============================== INIT ============================== */
+for (const el of document.querySelectorAll('input, select')) el.addEventListener('input', recompute);
+recompute();
+</script>
+
+</body>
+</html>
