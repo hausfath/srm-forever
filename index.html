@@ -262,8 +262,12 @@
         <input id="in-srmexp" type="number" value="1.3" step="0.1" min="1" max="3">
       </div>
       <div class="field">
-        <label for="in-mitcost">Mitigation cost <span class="unit">($/tCO&#8322;)</span> <span class="tip" tabindex="0" data-tip="Average cost per ton of CO&#8322; abated, charged while a path&rsquo;s gross emissions are still falling. A single flat price standing in for a rising marginal abatement cost curve; global-average estimates for deep decarbonization span roughly $10&ndash;100/t. Default $30.">&#9432;</span></label>
+        <label for="in-mitcost">Mitigation cost <span class="unit">($/tCO&#8322;)</span> <span class="tip" tabindex="0" data-tip="Cost per ton of CO&#8322; abated, paid annually by each vintage of abatement during its financing period, after which that vintage is free (cost parity; replacements at parity). A flat price standing in for a rising marginal abatement cost curve; global-average estimates for deep decarbonization span roughly $10&ndash;100/t. Default $30.">&#9432;</span></label>
         <input id="in-mitcost" type="number" value="30" step="5" min="0">
+      </div>
+      <div class="field">
+        <label for="in-finper">Abatement financing period <span class="unit">(yr)</span> <span class="tip" tabindex="0" data-tip="How long each vintage of abatement pays the mitigation price before reaching cost parity &mdash; the capital-recovery life of the clean capacity that replaced the emitting stock. Total transition cost per (tCO&#8322;/yr) eliminated = price &times; period (default $30 &times; 30 yr = $900). Typical capital lifetimes span ~20&ndash;50 yr; very large values approach a perpetual rental on abatement.">&#9432;</span></label>
+        <input id="in-finper" type="number" value="30" step="5" min="1" max="500">
       </div>
       <div class="field">
         <label for="in-cdrcost">CDR cost <span class="unit">($/tCO&#8322;)</span> <span class="tip" tabindex="0" data-tip="Cost per ton of durable carbon removal, flat for the whole drawdown. Engineered removal today runs ~$100&ndash;600+/t; $100 (default) assumes substantial long-run learning. Reasonable range ~50&ndash;300.">&#9432;</span></label>
@@ -298,13 +302,13 @@
         <input id="in-target" type="number" value="1.5" step="0.1" min="1">
       </div>
       <div class="field">
-        <label for="in-acct">Cost accounting <span class="tip" tabindex="0" data-tip="Total: both scenarios pay the mitigation price on all abatement below a constant 40 GtCO&#8322;/yr baseline (each path&rsquo;s full decarbonization bill is priced). Incremental: the SRM path is the shared reference, so only the differences between scenarios are priced. Affects every cost output, including the breakeven discount rate; with transition-only abatement the scenario gap is somewhat larger under total.">&#9432;</span></label>
+        <label for="in-acct">Cost accounting <span class="tip" tabindex="0" data-tip="Total: each scenario&rsquo;s full decarbonization bill is priced against a constant 40 GtCO&#8322;/yr baseline. Incremental: the SRM path&rsquo;s abatement stream is subtracted from both scenarios, so only differences are priced (the mitigation scenario&rsquo;s abatement line can dip briefly negative where the SRM world is paying more for its own later transition). Under the vintage-annuity abatement model both accountings give the identical scenario difference and breakeven rate; the choice only shifts displayed levels.">&#9432;</span></label>
         <select id="in-acct">
           <option value="total" selected>Total (vs constant 40 Gt)</option>
           <option value="incremental">Incremental (vs SRM path)</option>
         </select>
       </div>
-      <p class="ctrl-note">Total accounting (default) prices each scenario&rsquo;s full decarbonization against a constant 40 GtCO&#8322;/yr baseline; incremental accounting prices only the differences from the SRM scenario&rsquo;s emissions path. Either way, abatement is charged only while a path&rsquo;s gross emissions are still falling (through 2070 for the mitigation path, 2200 for the SRM path); a decarbonized economy is treated as self-sustaining thereafter.</p>
+      <p class="ctrl-note">Abatement is priced as a vintage annuity: each increment of abatement pays the mitigation price for the financing period after it is built, then reaches cost parity. Both scenarios therefore pay the same total for the same complete decarbonization (40 GtCO&#8322;/yr &times; price &times; period) &mdash; they differ only in <i>when</i> they pay it, so the discount rate carries the comparison. The accounting toggle shifts displayed levels only; the scenario difference and breakeven rate are identical under both.</p>
     </div>
   </section>
 
@@ -394,7 +398,8 @@ function readParams() {
   const v = id => parseFloat(document.getElementById(id).value);
   return {
     srmCost: v('in-srmcost'), srmExp: v('in-srmexp'),
-    mitCost: v('in-mitcost'), cdrCost: v('in-cdrcost'), cdrRate: v('in-cdrrate'),
+    mitCost: v('in-mitcost'), finPer: v('in-finper'),
+    cdrCost: v('in-cdrcost'), cdrRate: v('in-cdrrate'),
     zec: v('in-zec'), disc: v('in-disc') / 100,
     tcre: v('in-tcre'), tcreLo: v('in-tcrelo'), tcreHi: v('in-tcrehi'),
     target: v('in-target'),
@@ -431,13 +436,12 @@ function simulate(tcre, p) {
     if (cool > maxCool) { maxCool = cool; maxCoolYr = year; }
     if (cool > 0) srmEnd = year + 1;   /* SRM no longer needed from this year on */
     const srmDeploy = p.srmCost * Math.pow(cool / 0.1, p.srmExp);
-    /* abatement charged only during each path's transition; free once at its floor */
-    const mitPays = year < 2070;
-    const srmPays = year < 2200;
-    const abateS = p.acct === 'total' && srmPays ? (40 - gS) * p.mitCost : 0;
-    const abateM = p.acct === 'total'
-      ? (mitPays ? (40 - gM) * p.mitCost : 0)
-      : (mitPays ? (gS - gM) * p.mitCost : 0);   /* incremental: wedge below the SRM path */
+    /* vintage-annuity abatement: each vintage pays $/t for finPer years after it is
+       built, then reaches parity. Abatement younger than finPer = gross(t-D) - gross(t). */
+    const vintS = grossEmisSRM(year - p.finPer) - gS;
+    const vintM = grossEmisMit(year - p.finPer) - gM;
+    const abateS = p.acct === 'total' ? vintS * p.mitCost : 0;
+    const abateM = (p.acct === 'total' ? vintM : vintM - vintS) * p.mitCost;
     cSRM[i] = abateS + srmDeploy;
     cMit[i] = abateM + (cdrNow ? p.cdrRate * p.cdrCost : 0);
     const df = Math.pow(1 + p.disc, -i);
@@ -463,12 +467,10 @@ function npvDiff(p, r) {
       if (tM > p.target) { cdrNow = true; netM = gM - p.cdrRate; } else cdrDone = true;
     }
     const cool = Math.max(0, tS - p.target);
-    const mitPays = year < 2070, srmPays = year < 2200;
-    const cS = (p.acct === 'total' && srmPays ? (40 - gS) * p.mitCost : 0)
+    /* vintage-annuity abatement; the scenario difference is accounting-invariant */
+    const cS = (grossEmisSRM(year - p.finPer) - gS) * p.mitCost
              + p.srmCost * Math.pow(cool / 0.1, p.srmExp);
-    const cM = (p.acct === 'total'
-              ? (mitPays ? (40 - gM) * p.mitCost : 0)
-              : (mitPays ? (gS - gM) * p.mitCost : 0))
+    const cM = (grossEmisMit(year - p.finPer) - gM) * p.mitCost
              + (cdrNow ? p.cdrRate * p.cdrCost : 0);
     d += (cS - cM) * Math.pow(1 + r, -i);
     cumS += gS; cumM += netM;
@@ -513,7 +515,7 @@ const rangeState = { temp: 0, cost: 3, emis: 0 };
 
 function recompute() {
   params = readParams();
-  if (![params.srmCost, params.mitCost, params.cdrCost, params.cdrRate, params.zec,
+  if (![params.srmCost, params.mitCost, params.finPer, params.cdrCost, params.cdrRate, params.zec,
         params.disc, params.tcre, params.tcreLo, params.tcreHi, params.target, params.srmExp]
         .every(Number.isFinite)) return;
   setHorizon(params);
@@ -735,7 +737,7 @@ function renderChart(kind) {
   const toY = v => M.t + 14 + (vMax - v) / (vMax - vMin) * (CH - M.t - 14 - M.b);
 
   let g = axes(xs, niceValTicks(vMin, vMax, 5), toY, yTitle, yFmt);
-  if (kind === 'emis' && vMin < 0) {
+  if ((kind === 'emis' || kind === 'cost') && vMin < 0) {
     const y0 = toY(0).toFixed(1);
     g += `<line x1="${M.l}" x2="${CW - M.r}" y1="${y0}" y2="${y0}" stroke="var(--axis)" stroke-width="1" stroke-dasharray="2 3"/>`;
   }
@@ -855,8 +857,9 @@ const METHODS_HTML = `
   <li><b>SRM scenario emissions.</b> 40 GtCO&#8322;/yr through 2030, declining linearly to zero in 2200 (~3,600 GtCO&#8322; cumulative). SRM (SAI) holds temperature at the target; the required cooling is the gap between the underlying no-SRM temperature and the target, and deployment ends when that gap closes on its own through the ZEC drift.</li>
   <li><b>Mitigation + CDR scenario emissions.</b> 40 GtCO&#8322;/yr through 2030, declining linearly to zero in 2070. From 2070, CDR removes the set rate (default 2 GtCO&#8322;/yr) until global temperature first returns to the temperature target (default 1.5&deg;C, the same target SRM holds), then stops permanently and emissions stay at net zero.</li>
   <li><b>SRM cost.</b> Annual cost = (cooling / 0.1&deg;C)<sup>k</sup> &times; the $B-per-0.1&deg;C input. Default k = 1.3, matching the forcing saturation of Niemeier &amp; Timmreck (2015) over this scenario&rsquo;s cooling range (see Cost nonlinearity below); k = 1 gives constant cost per degree (Smith 2020).</li>
-  <li><b>Cost accounting.</b> Total (default): both scenarios pay the mitigation price on all abatement below a constant 40 GtCO&#8322;/yr baseline, so each path&rsquo;s full decarbonization bill is priced. Incremental: the SRM scenario&rsquo;s emissions path is the shared reference, so the SRM scenario pays only for aerosol deployment and the mitigation scenario pays the mitigation price on the wedge between the two paths plus the CDR bill. Abatement is always charged only while a path&rsquo;s gross emissions are still falling (through 2070 for the mitigation path, 2200 for the SRM path), treating the decarbonized system as self-sustaining thereafter &mdash; so once CDR ends, the mitigation scenario&rsquo;s annual cost is zero. Because of this, the total accounting also bills the SRM scenario&rsquo;s own 2030&ndash;2200 decline, making the scenario difference somewhat larger under total than under incremental accounting; the accounting choice flows through every cost output, including the breakeven discount rate.</li>
-  <li><b>Discounting.</b> NPV = &Sigma; cost(t) &times; (1 + r)<sup>&minus;(t&minus;2025)</sup>, constant exponential discounting at the input rate. The breakeven rate is found by bisection on the NPV difference over 0&ndash;10%, computed under the selected cost accounting.</li>
+  <li><b>Abatement cost (vintage annuity).</b> Each increment of abatement pays the mitigation price ($/tCO&#8322;) every year for the financing period after it is built &mdash; the capital-recovery life of the clean capacity that replaced the emitting stock &mdash; and then reaches cost parity (replacements at parity via learning). With gross emissions declining monotonically, the abatement still under financing at time t is simply gross(t&nbsp;&minus;&nbsp;D)&nbsp;&minus;&nbsp;gross(t). Annual cost therefore ramps up over the first D years of the transition, plateaus, and ramps down to zero over the D years after net zero &mdash; no perpetual rental, and no cliff at net zero. Both scenarios pay an identical undiscounted total for the same complete decarbonization (40 GtCO&#8322;/yr &times; price &times; period, $36T at defaults); they differ only in timing. The financing-period input nests the alternatives: very large D approaches a perpetual rental, D &rarr; 1 approaches a one-time investment per unit of capacity.</li>
+  <li><b>Cost accounting.</b> Total (default): each scenario&rsquo;s annuity bill is shown in full against a constant 40 GtCO&#8322;/yr baseline. Incremental: the SRM scenario&rsquo;s abatement stream is subtracted from both scenarios, so the SRM scenario shows only aerosol deployment and the mitigation scenario shows the difference of the two annuity streams plus CDR (briefly negative around 2100&ndash;2210, when the SRM world is paying more for its own later transition). Under the vintage annuity the scenario difference, and hence the breakeven discount rate, is identical under both accountings; the toggle changes displayed levels only.</li>
+  <li><b>Discounting.</b> NPV = &Sigma; cost(t) &times; (1 + r)<sup>&minus;(t&minus;2025)</sup>, constant exponential discounting at the input rate. The breakeven rate is found by bisection on the NPV difference over 0&ndash;10% (identical under either cost accounting).</li>
   <li>All costs in constant dollars (SRM costs are 2020 USD in the source); no cost growth, learning curves, or damage functions &mdash; this is a cost-only comparison, not a welfare analysis.</li>
 </ul>
 <h3>Sources (verified against primary texts)</h3>

@@ -18,8 +18,8 @@ Both scenarios reach zero emissions and end at 1.5°C; they differ in how fast, 
 - Annual timestep from 2025 (warming set to 1.5°C above 1850–1900). The horizon is endogenous: the simulation runs until the highest-TCRE variant's SRM requirement ends, capped at 100,000 years.
 - Temperature: T(t) = 1.5°C + TCRE × cumulative net CO₂ / 1000 + ZEC drift × (t − 2025)/1000, floored at preindustrial.
 - SRM cost: (cooling/0.1°C)^k × $B-per-0.1°C, default anchor $1.8B (Smith 2020) and exponent k = 1.3 (Niemeier & Timmreck 2015 forcing saturation over this scenario's 1–2.3°C peak-cooling range).
-- Abatement is charged only while a path's gross emissions are still falling ("transition only"); cost accounting is selectable (total vs. constant 40 Gt baseline, or incremental vs. the SRM path) and flows through every output including the breakeven discount rate.
-- NPV with a constant exponential discount rate (default 1%); the breakeven rate is found by bisection.
+- Abatement is priced as a **vintage annuity**: each increment of abatement pays the mitigation price ($/tCO₂, default $30) every year for a financing period (default 30 yr, the capital-recovery life of the clean capacity), then reaches cost parity. Annual abatement cost ramps up during the transition, plateaus, and ramps back down over the financing period after net zero — no perpetual rental, no cliff. Both scenarios pay an identical undiscounted total for the same complete decarbonization (40 GtCO₂/yr × price × period, $36T at defaults); they differ only in timing, so the discount rate carries the comparison. The accounting toggle (total vs. incremental) changes displayed levels only.
+- NPV with a constant exponential discount rate (default 1%); the breakeven rate is found by bisection and is identical under either accounting.
 
 Full methods, parameter tooltips, a data table, and caveats are documented in the page itself.
 
@@ -32,7 +32,7 @@ Full methods, parameter tooltips, a data table, and caveats are documented in th
 
 ## Headline behavior (defaults)
 
-At the default settings (total accounting, 1%/yr discounting, $30/t mitigation, $100/t CDR at 2 GtCO₂/yr, SRM $1.8B per 0.1°C with exponent 1.3), **mitigation + CDR is cheaper** (~$30T vs. ~$38T NPV), with a breakeven discount rate of ~1.7%. Under incremental accounting the breakeven drops to ~0.06%. The verdict turns almost entirely on the discount rate, the cost accounting, and the ZEC extrapolation — the tool is built to make those dependencies explicit rather than to hide them.
+At the default settings (1%/yr discounting, $30/t mitigation over a 30-yr financing period, $100/t CDR at 2 GtCO₂/yr, SRM $1.8B per 0.1°C with exponent 1.3), **the SRM scenario is cheaper in NPV** (~$18T vs. ~$37T), with a breakeven discount rate of ~0.08%: below that, mitigation + CDR wins, as it does undiscounted (~$127T vs. ~$511T over the full horizon). The verdict turns almost entirely on the discount rate and the ZEC extrapolation — the tool is built to make those dependencies explicit rather than to hide them.
 
 ## Major caveats
 
