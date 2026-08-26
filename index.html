@@ -216,6 +216,11 @@
   }
   .callout b { color: var(--ink); }
 
+  .essay p { max-width: 72ch; color: var(--ink-2); margin: 0 0 0.95rem; }
+  .essay p:last-child { margin-bottom: 0; }
+  .essay h2 { margin-bottom: 0.8rem; }
+  .essay a { color: var(--mit); }
+
   details.methods { border: 1px solid var(--border); border-radius: 10px; background: var(--surface); }
   details.methods summary {
     cursor: pointer; padding: 0.85rem 1.25rem;
@@ -282,8 +287,12 @@
         <input id="in-zec" type="number" value="-0.1" step="0.05">
       </div>
       <div class="field">
-        <label for="in-disc">Discount rate <span class="unit">(%/yr)</span> <span class="tip" tabindex="0" data-tip="Constant exponential discount rate applied to all future costs. This single choice dominates the verdict: at 0% every generation counts equally and millennia of SRM operations accumulate; above ~1% costs beyond a few centuries vanish. Social discounting debates span ~0&ndash;3% (Stern 1.4%, US OMB 2%, Nordhaus ~3&ndash;4%+).">&#9432;</span></label>
+        <label for="in-disc">Discount rate &mu; <span class="unit">(mean, %/yr)</span> <span class="tip" tabindex="0" data-tip="Mean of the uncertain social discount rate. With uncertainty &sigma; &gt; 0, discounting follows Weitzman&rsquo;s certainty-equivalent (gamma) form: the effective rate starts near &mu; and declines toward zero at long horizons, because low-rate futures dominate far-future present values. Set &sigma; = 0 for conventional constant-rate discounting at &mu;. Social discounting debates span ~0&ndash;4% (Stern 1.4%, expert-survey median 2%, Nordhaus ~4%+).">&#9432;</span></label>
         <input id="in-disc" type="number" value="1" step="0.25" min="0" max="10">
+      </div>
+      <div class="field">
+        <label for="in-dsig">Rate uncertainty &sigma; <span class="unit">(%/yr)</span> <span class="tip" tabindex="0" data-tip="Standard deviation of the uncertain discount rate (gamma-distributed across possible futures and ethical positions). The certainty-equivalent discount factor is (1 + &sigma;&sup2;t/&mu;)^(&minus;&mu;&sup2;/&sigma;&sup2;), so the effective rate declines from &mu; toward zero as the horizon grows &mdash; Weitzman (1998, 2001). Expert disagreement suggests &sigma; comparable to &mu;; Weitzman&rsquo;s survey found &mu; &asymp; 4%, &sigma; &asymp; 3%. Set 0 to recover constant exponential discounting.">&#9432;</span></label>
+        <input id="in-dsig" type="number" value="1" step="0.25" min="0" max="10">
       </div>
       <div class="field">
         <label for="in-tcre">TCRE central <span class="unit">(&deg;C / 1,000 GtCO&#8322;)</span> <span class="tip" tabindex="0" data-tip="Transient climate response to cumulative CO&#8322; emissions. AR6 best estimate: 0.45&deg;C per 1,000 GtCO&#8322; (1.65&deg;C per 1,000 PgC), SPM D.1.1. Linearity holds with high confidence to ~5,500 GtCO&#8322; cumulative.">&#9432;</span></label>
@@ -361,6 +370,16 @@
     <summary>Methods, sources &amp; caveats</summary>
     <div class="inner" id="methods-body"></div>
   </details>
+
+  <section class="panel essay">
+    <h2>How much does year 12,000 count? The discount-rate debate</h2>
+    <p>Everything above ultimately hinges on one number. The mitigation scenario spends its money over decades to a few centuries; the SRM scenario spreads a smaller annual bill over sixteen millennia. Comparing them requires deciding how much a cost borne in the year 12,000 counts against a dollar spent today &mdash; and that decision, not the climate physics, is what flips the verdict.</p>
+    <p>One camp, associated with <a href="https://www.aeaweb.org/articles?id=10.1257%2Fjel.45.3.686" target="_blank" rel="noopener">Nordhaus</a>, says the answer should be read off markets. Capital is productive: a dollar invested at historical returns of 4&ndash;5% grows into far more than a dollar, so the cheapest way to help the future is to invest now and let compounding do the work. This &ldquo;descriptive&rdquo; view has real force over decades. Over millennia it frays: the compensating investment is hypothetical, since no fund, trust, or state has ever carried a transfer across even a tenth of these horizons, and market rates reveal the preferences of people trading over years, not the interests of people ten thousand years out who are not present to bid.</p>
+    <p>The other camp, running from Ramsey (1928) to the Stern Review, holds that discounting the welfare of future people simply because they are future is, in Ramsey&rsquo;s words, &ldquo;ethically indefensible and arises merely from the weakness of the imagination.&rdquo; Stern set pure time preference at 0.1%/yr &mdash; justified only as the annual risk that no one is around to bear the cost &mdash; and discounted at about 1.4% overall. The standard rejoinder is that literal zero discounting has its own pathologies over unbounded horizons: any present sacrifice, however crushing, can be justified by an arbitrarily small benefit that lasts forever &mdash; a tyranny of the future to match the tyranny of the present.</p>
+    <p>Two further arguments matter specifically at this model&rsquo;s timescale. First, the standard formula (discount rate = time preference + inequality aversion &times; growth) leans on future people being richer than us; sustained growth for ten thousand years implies consumption multiplying by factors with dozens of zeros, so either growth saturates and the rate falls toward pure time preference, or extra consumption stops mattering &mdash; both undermine constant market-like rates. Second, a constant rate makes an extreme quantitative claim without meaning to: at 1%/yr, a cost in the year 12,000 counts as ~10<sup>&minus;44</sup> of the same cost today. Read as a survival probability &mdash; the only coherent long-run reading of pure time preference &mdash; that asserts near-certainty that the obligation will never come due. Few people would defend that claim outright; a constant discount rate asserts it silently.</p>
+    <p>This tool adopts <a href="https://www.aeaweb.org/articles?id=10.1257%2Faer.91.1.260" target="_blank" rel="noopener">Weitzman&rsquo;s</a> resolution, which does not require settling the debate. If the &ldquo;right&rdquo; rate is uncertain &mdash; across economic theories, ethical positions, and possible futures &mdash; then the correct object to average is the discount <i>factor</i>, not the rate. Low-rate possibilities dominate far-future present values, so the certainty-equivalent rate starts at the mean &mu; and declines toward zero as the horizon grows (<a href="https://doi.org/10.1006/jeem.1998.1052" target="_blank" rel="noopener">Weitzman 1998</a>; <a href="https://www.aeaweb.org/articles?id=10.1257%2Faer.91.1.260" target="_blank" rel="noopener">2001</a>). The disagreement itself becomes the &sigma; input: <a href="https://www.aeaweb.org/articles?id=10.1257%2Fpol.20160240" target="_blank" rel="noopener">Drupp et al. (2018)</a> surveyed over 200 experts and found a median long-run social discount rate of 2% with wide, persistent spread. Declining schedules are also institutional practice, not just theory: <a href="https://www.science.org/doi/10.1126/science.1235665" target="_blank" rel="noopener">Arrow and twelve coauthors (2013)</a> recommended them for US policy, and the <a href="https://www.gov.uk/government/publications/the-green-book-appraisal-and-evaluation-in-central-government/the-green-book-2026" target="_blank" rel="noopener">UK Treasury&rsquo;s Green Book</a> mandates a stepped decline (3.5% to 2.5% across the first 125 years in the 2026 edition, with deeper declines toward ~0.9% in its long-horizon sensitivity guidance). We chose the Weitzman form over an official schedule because it is transparent, two-parameter, and honest about its own basis: &mu; is your central rate, &sigma; is how much you concede the debate is unresolved, and &sigma; = 0 recovers the conventional constant rate.</p>
+    <p>The deeper point is that no measurement settles this. Market interest rates are facts, but whether they are the <i>right</i> weights for people who cannot participate in those markets is an ethical judgment &mdash; a claim about the moral standing of the unborn, dressed in the notation of finance. That is why this page treats the discount rate as an input rather than a conclusion, and why the breakeven tile is arguably the most important output: under plausible uncertainty about the rate, the SRM-forever question lands squarely inside the range over which serious people actually disagree. The model can show what your ethics imply; it cannot choose them for you.</p>
+  </section>
 </div>
 
 <script>
@@ -394,13 +413,22 @@ function grossEmisMit(year) {
   return 0;
 }
 
+/* Weitzman certainty-equivalent discount factor: uncertain rate ~ Gamma(mean mu, sd sig)
+   => E[e^(-rt)] = (1 + sig^2 t / mu)^(-mu^2/sig^2). sig = 0 recovers exp(-mu t). */
+function dfac(i, mu, sig) {
+  if (sig <= 0) return mu <= 0 ? 1 : Math.exp(-mu * i);
+  if (mu <= 0) return 1;
+  const a = mu * mu / (sig * sig);
+  return Math.pow(1 + sig * sig * i / mu, -a);
+}
+
 function readParams() {
   const v = id => parseFloat(document.getElementById(id).value);
   return {
     srmCost: v('in-srmcost'), srmExp: v('in-srmexp'),
     mitCost: v('in-mitcost'), finPer: v('in-finper'),
     cdrCost: v('in-cdrcost'), cdrRate: v('in-cdrrate'),
-    zec: v('in-zec'), disc: v('in-disc') / 100,
+    zec: v('in-zec'), disc: v('in-disc') / 100, dsig: v('in-dsig') / 100,
     tcre: v('in-tcre'), tcreLo: v('in-tcrelo'), tcreHi: v('in-tcrehi'),
     target: v('in-target'),
     acct: document.getElementById('in-acct').value
@@ -444,7 +472,7 @@ function simulate(tcre, p) {
     const abateM = (p.acct === 'total' ? vintM : vintM - vintS) * p.mitCost;
     cSRM[i] = abateS + srmDeploy;
     cMit[i] = abateM + (cdrNow ? p.cdrRate * p.cdrCost : 0);
-    const df = Math.pow(1 + p.disc, -i);
+    const df = dfac(i, p.disc, p.dsig);
     npvS += cSRM[i] * df; npvM += cMit[i] * df;
     sumS += cSRM[i]; sumM += cMit[i];
     cumS += gS; cumM += netM;
@@ -472,7 +500,7 @@ function npvDiff(p, r) {
              + p.srmCost * Math.pow(cool / 0.1, p.srmExp);
     const cM = (grossEmisMit(year - p.finPer) - gM) * p.mitCost
              + (cdrNow ? p.cdrRate * p.cdrCost : 0);
-    d += (cS - cM) * Math.pow(1 + r, -i);
+    d += (cS - cM) * dfac(i, r, p.dsig);
     cumS += gS; cumM += netM;
   }
   return d; /* positive => SRM more expensive */
@@ -516,7 +544,7 @@ const rangeState = { temp: 0, cost: 3, emis: 0 };
 function recompute() {
   params = readParams();
   if (![params.srmCost, params.mitCost, params.finPer, params.cdrCost, params.cdrRate, params.zec,
-        params.disc, params.tcre, params.tcreLo, params.tcreHi, params.target, params.srmExp]
+        params.disc, params.dsig, params.tcre, params.tcreLo, params.tcreHi, params.target, params.srmExp]
         .every(Number.isFinite)) return;
   setHorizon(params);
   sims = {
@@ -555,12 +583,12 @@ function renderTiles() {
          `${fmtMoney(Math.min(lo.npvM, hi.npvM))} \u2013 ${fmtMoney(Math.max(lo.npvM, hi.npvM))} (TCRE likely)`,
          'var(--mit)') +
     `<div class="tile verdict">
-       <p class="t-label">Cheaper at ${fmtPct(params.disc)}/yr discounting</p>
+       <p class="t-label">Cheaper at \u03bc=${fmtPct(params.disc)}, \u03c3=${fmtPct(params.dsig)}</p>
        <div class="t-value">${cheaper}</div>
        <div class="t-range">\u0394NPV (SRM \u2212 mit): ${fmtMoney(dMid)} [${fmtMoney(dLo)} to ${fmtMoney(dHi)}]</div>
      </div>` +
-    tile('Breakeven discount rate', beRate == null ? 'none in 0\u201310%' : fmtPct(beRate),
-         beRate == null ? 'one scenario cheaper across range' : 'below this, mitigation + CDR wins') +
+    tile('Breakeven mean rate \u03bc', beRate == null ? 'none in 0\u201310%' : fmtPct(beRate),
+         beRate == null ? 'one scenario cheaper across range' : `at \u03c3=${fmtPct(params.dsig)}; below this, mitigation + CDR wins`) +
     tile('CDR runs until', mid.cdrStop ? String(mid.cdrStop) : 'beyond horizon',
          mid.cdrStop ? `${mid.cdrStop - 2070} years at ${params.cdrRate} GtCO\u2082/yr` : '') +
     tile('SRM runs until',
@@ -859,7 +887,7 @@ const METHODS_HTML = `
   <li><b>SRM cost.</b> Annual cost = (cooling / 0.1&deg;C)<sup>k</sup> &times; the $B-per-0.1&deg;C input. Default k = 1.3, matching the forcing saturation of Niemeier &amp; Timmreck (2015) over this scenario&rsquo;s cooling range (see Cost nonlinearity below); k = 1 gives constant cost per degree (Smith 2020).</li>
   <li><b>Abatement cost (vintage annuity).</b> Each increment of abatement pays the mitigation price ($/tCO&#8322;) every year for the financing period after it is built &mdash; the capital-recovery life of the clean capacity that replaced the emitting stock &mdash; and then reaches cost parity (replacements at parity via learning). With gross emissions declining monotonically, the abatement still under financing at time t is simply gross(t&nbsp;&minus;&nbsp;D)&nbsp;&minus;&nbsp;gross(t). Annual cost therefore ramps up over the first D years of the transition, plateaus, and ramps down to zero over the D years after net zero &mdash; no perpetual rental, and no cliff at net zero. Both scenarios pay an identical undiscounted total for the same complete decarbonization (40 GtCO&#8322;/yr &times; price &times; period, $36T at defaults); they differ only in timing. The financing-period input nests the alternatives: very large D approaches a perpetual rental, D &rarr; 1 approaches a one-time investment per unit of capacity.</li>
   <li><b>Cost accounting.</b> Total (default): each scenario&rsquo;s annuity bill is shown in full against a constant 40 GtCO&#8322;/yr baseline. Incremental: the SRM scenario&rsquo;s abatement stream is subtracted from both scenarios, so the SRM scenario shows only aerosol deployment and the mitigation scenario shows the difference of the two annuity streams plus CDR (briefly negative around 2100&ndash;2210, when the SRM world is paying more for its own later transition). Under the vintage annuity the scenario difference, and hence the breakeven discount rate, is identical under both accountings; the toggle changes displayed levels only.</li>
-  <li><b>Discounting.</b> NPV = &Sigma; cost(t) &times; (1 + r)<sup>&minus;(t&minus;2025)</sup>, constant exponential discounting at the input rate. The breakeven rate is found by bisection on the NPV difference over 0&ndash;10% (identical under either cost accounting).</li>
+  <li><b>Discounting (Weitzman certainty-equivalent).</b> The social discount rate is treated as uncertain, gamma-distributed with mean &mu; and standard deviation &sigma;. The correct object to average is the discount <i>factor</i>, not the rate, giving DF(t) = (1 + &sigma;&sup2;t/&mu;)<sup>&minus;&mu;&sup2;/&sigma;&sup2;</sup> (Weitzman 1998, 2001). The effective rate &mu;/(1 + &sigma;&sup2;t/&mu;) starts at &mu; and declines hyperbolically toward zero, so the far future is discounted at the lowest plausible rate rather than at &mu;. Setting &sigma; = 0 recovers conventional exponential discounting e<sup>&minus;&mu;t</sup>. The breakeven is found by bisection on &mu; over 0&ndash;10% holding &sigma; fixed (identical under either cost accounting).</li>
   <li>All costs in constant dollars (SRM costs are 2020 USD in the source); no cost growth, learning curves, or damage functions &mdash; this is a cost-only comparison, not a welfare analysis.</li>
 </ul>
 <h3>Sources (verified against primary texts)</h3>
@@ -879,7 +907,7 @@ const METHODS_HTML = `
   <li><b>Termination shock is not priced.</b> The SRM scenario carries a permanent obligation: stopping deployment at any point yields decades of very rapid warming toward the dashed line. A risk premium on this is arguably the largest missing cost term.</li>
   <li><b>No damages.</b> Scenarios are compared on program cost only. The mitigation scenario has ~0.3&ndash;0.6&deg;C of overshoot for ~160 years that the SRM scenario avoids; a damage function would credit SRM for that and debit it for residual/novel risks. Neither side is counted.</li>
   <li><b>Constant technology and prices.</b> CDR stays at the input price for centuries and mitigation at a single flat $/ton; both are strong simplifications (real MACs are convex; long-run learning could cut CDR costs substantially).</li>
-  <li><b>Discounting over millennia is an ethical choice, not a technical one.</b> At any constant positive rate, costs beyond a few centuries are invisible: that single choice, not the science, drives which scenario &ldquo;wins.&rdquo; The breakeven-rate tile makes this explicit.</li>
+  <li><b>Discounting over millennia is an ethical choice, not a technical one.</b> The Weitzman certainty-equivalent form softens the tyranny of constant exponential discounting, but which mean rate and which uncertainty to assume remain normative judgments; the breakeven-rate tile and the essay below make the dependence explicit.</li>
 </ul>`;
 
 /* ============================== INPUT INFO TOOLTIPS ============================== */
